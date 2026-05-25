@@ -1,0 +1,1161 @@
+% !TEX program = pdflatex
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+\usepackage{array}
+\tcbuselibrary{breakable,skins}
+
+% ---------- Notation ----------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\PP}{\mathbb{P}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\grad}{\nabla}
+\newcommand{\diver}{\mathrm{div}}
+\newcommand{\tr}{\mathrm{tr}}
+\newcommand{\Id}{\mathrm{Id}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\inner}[2]{\left\langle #1,#2 \right\rangle}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\law}{\mathrm{Law}}
+
+% ---------- Theorem environments ----------
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ---------- Pastel boxes ----------
+\definecolor{pastelblue}{RGB}{233,243,255}
+\definecolor{pastelgreen}{RGB}{236,250,241}
+\definecolor{pastelpink}{RGB}{255,238,242}
+\definecolor{pastelyellow}{RGB}{255,250,230}
+\definecolor{pastelgray}{RGB}{245,246,248}
+\definecolor{pastelpurple}{RGB}{243,237,255}
+
+\newtcolorbox{keybox}[2][]{
+  enhanced,breakable,colback=pastelblue,colframe=blue!15,boxrule=0.6pt,arc=2mm,
+  left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,title=\textbf{#2},fonttitle=\normalsize,#1
+}
+\newtcolorbox{resultbox}[2][]{
+  enhanced,breakable,colback=pastelgreen,colframe=green!20,boxrule=0.6pt,arc=2mm,
+  left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,title=\textbf{#2},fonttitle=\normalsize,#1
+}
+\newtcolorbox{warnbox}[2][]{
+  enhanced,breakable,colback=pastelyellow,colframe=yellow!35!black,boxrule=0.6pt,arc=2mm,
+  left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,title=\textbf{#2},fonttitle=\normalsize,#1
+}
+\newtcolorbox{insightbox}[2][]{
+  enhanced,breakable,colback=pastelpink,colframe=red!15,boxrule=0.6pt,arc=2mm,
+  left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,title=\textbf{#2},fonttitle=\normalsize,#1
+}
+\newtcolorbox{summarybox}[2][]{
+  enhanced,breakable,colback=pastelpurple,colframe=purple!15,boxrule=0.6pt,arc=2mm,
+  left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,title=\textbf{#2},fonttitle=\normalsize,#1
+}
+
+% ---------- Title ----------
+\title{\textbf{Flow Matching and Diffusion Models}\\[6pt]
+\large From transport PDEs to conditional velocity fields: a rigorous and unified course}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This course presents a self-contained, rigorously organized treatment of Flow Matching~(FM) and its relationship to diffusion models.
+The logical chain is: (1)~stochastic dynamics and the Fokker--Planck equation; (2)~deterministic dynamics and the continuity equation with its mass conservation criterion; (3)~the SDE/ODE bridge via the probability-flow ODE, reverse-time SDE, and marginal-preserving families; (4)~the FM framework, which learns a velocity field whose ODE flow transports a source distribution to a target, using conditional paths and the marginalization trick for tractable training; (5)~concrete constructions of probability paths and velocity fields, including the probability-path-first (Eulerian) and flow-first (Lagrangian) perspectives; (6)~the full unification showing that Gaussian FM is equivalent to diffusion, that all four prediction parameterizations are interchangeable, and that all affine flows are equivalent up to time reparameterization.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% =====================================================================================
+%  PART I: TRANSPORT PDEs AND DYNAMICS
+% =====================================================================================
+
+\part{Transport PDEs and Dynamics}
+
+% =====================================================================================
+\section{Core objects and notation}\label{sec:notation}
+
+\paragraph{Setting.}
+We work in $\R^d$.
+All densities are with respect to the Lebesgue measure.
+We write $p_t$ for the density of a random variable $X_t$ at time $t$.
+
+\begin{definition}[Score function]
+For a smooth, strictly positive density $p$, the \emph{score} is
+\[
+s(x) \coloneqq \grad_x \log p(x) = \frac{\grad_x p(x)}{p(x)}.
+\]
+For a time-indexed family $(p_t)_{t\in[0,T]}$, write $s(x,t) = \grad_x \log p_t(x)$.
+\end{definition}
+
+\begin{definition}[Probability path]
+A \emph{probability path} is a family of densities $(p_t)_{t\in[0,1]}$ with prescribed boundary conditions, typically $p_0 = p_{\mathrm{src}}$ (source) and $p_1 = p_{\mathrm{tgt}}$ (target).
+\end{definition}
+
+\begin{keybox}{Central viewpoint}
+Both diffusion models and flow matching specify (explicitly or implicitly) a probability path $(p_t)_{t\in[0,1]}$ from a simple source $p_0$ to a data target $p_1$, and then construct dynamics --- deterministic or stochastic --- whose time marginals match this path.
+The entire FM--diffusion bridge rests on this principle.
+\end{keybox}
+
+% =====================================================================================
+\section{Stochastic dynamics and the Fokker--Planck equation}\label{sec:sde-fp}
+
+We begin with the most general setting: stochastic differential equations and the PDE governing the evolution of their marginal densities.
+
+\subsection{Forward SDE}
+
+\begin{definition}[Forward SDE]\label{def:forward-sde}
+Let $f:\R^d\times[0,T]\to\R^d$ be a drift and $g:[0,T]\to\R_{\ge 0}$ a scalar diffusion coefficient.
+A forward SDE is
+\begin{equation}\label{eq:forward-sde}
+\dd X_t = f(X_t,t)\dd t + g(t)\dd W_t, \qquad X_0 \sim p_0,
+\end{equation}
+where $W_t$ is a standard $d$-dimensional Brownian motion.
+Under standard regularity (e.g., $f$ Lipschitz in $x$, at most linear growth), \eqref{eq:forward-sde} admits a unique strong solution with continuous sample paths.
+\end{definition}
+
+\subsection{The Fokker--Planck equation}\label{subsec:fp}
+
+The PDE governing the evolution of $p_t = \law(X_t)$ is the Fokker--Planck equation.
+We state it first in weak form (the most natural formulation from the probabilistic viewpoint), then in strong form.
+
+\begin{definition}[Fokker--Planck equation --- weak form]\label{def:fp-weak}
+Let $\varphi \in C_c^\infty(\R^d)$ be a test function.
+A family $(p_t)$ satisfies the Fokker--Planck equation for the SDE~\eqref{eq:forward-sde} if, for all $\varphi$,
+\begin{equation}\label{eq:fp-weak}
+\frac{\dd}{\dd t}\int_{\R^d} \varphi(x)\,p_t(x)\dd x
+=
+\int_{\R^d} \inner{\grad\varphi(x)}{f(x,t)}\,p_t(x)\dd x
++ \frac{g(t)^2}{2}\int_{\R^d} \Delta\varphi(x)\,p_t(x)\dd x.
+\end{equation}
+\end{definition}
+
+\begin{proof}[Derivation of the weak form]
+Apply It\^o's formula to $\varphi(X_t)$ for the SDE~\eqref{eq:forward-sde}:
+\[
+\dd\varphi(X_t) = \inner{\grad\varphi(X_t)}{f(X_t,t)}\dd t + g(t)\inner{\grad\varphi(X_t)}{\dd W_t} + \frac{g(t)^2}{2}\Delta\varphi(X_t)\dd t.
+\]
+Take expectations.
+The It\^o integral $\int_0^t g(s)\inner{\grad\varphi(X_s)}{\dd W_s}$ is a martingale (under standard integrability), hence has zero expectation.
+Differentiating $\E[\varphi(X_t)] = \int \varphi(x)\,p_t(x)\dd x$ yields~\eqref{eq:fp-weak}.
+\end{proof}
+
+\begin{definition}[Fokker--Planck equation --- strong form]\label{def:fp-strong}
+If $p_t$ is smooth and decays suitably at infinity, integration by parts in~\eqref{eq:fp-weak} yields the strong form:
+\begin{equation}\label{eq:fp-strong}
+\partial_t p_t = -\diver(p_t f) + \frac{g(t)^2}{2}\,\Delta p_t.
+\end{equation}
+\end{definition}
+
+\subsection{A fundamental score identity}\label{subsec:score-id}
+
+The following identity is used repeatedly throughout the course to trade Laplacians for score-weighted divergences.
+
+\begin{lemma}[Score--Laplacian identity]\label{lem:score-lap}
+Let $p$ be smooth and strictly positive, with score $s = \grad\log p$.
+Then
+\begin{equation}\label{eq:score-lap}
+\diver(p\,s) = \diver(p\,\grad\log p) = \diver(\grad p) = \Delta p.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+$p\,\grad\log p = p \cdot \frac{\grad p}{p} = \grad p$.
+Hence $\diver(p\,s) = \diver(\grad p) = \Delta p$.
+\end{proof}
+
+\begin{insightbox}{Why scores enter all marginal equivalences}
+Identity~\eqref{eq:score-lap} implies that the diffusion term $\frac{g^2}{2}\Delta p$ in Fokker--Planck can be rewritten as $\frac{g^2}{2}\diver(p\,s)$.
+This is exactly what allows trading stochasticity (diffusion) for a deterministic correction involving the score, producing ODEs and families of SDEs with identical marginals.
+\end{insightbox}
+
+% =====================================================================================
+\section{Deterministic dynamics and the continuity equation}\label{sec:ode-cont}
+
+We now turn to the deterministic counterpart: ODE flows and the continuity equation.
+
+\subsection{Flow maps and velocity fields}
+
+\begin{definition}[Flow map and pushforward]\label{def:flow-map}
+A \emph{flow map} is a family of measurable maps $\Psi_{s\to t}:\R^d\to\R^d$ indexed by $s,t\in[0,1]$, with $\Psi_{s\to s} = \mathrm{Id}$.
+Given $X_s \sim p_s$, define $X_t \coloneqq \Psi_{s\to t}(X_s)$.
+The law of $X_t$ is the \emph{pushforward} $(\Psi_{s\to t})_\# p_s$, defined by
+\[
+\int \varphi(x)\,(\Psi_{s\to t})_\# p_s(\dd x) \coloneqq \int \varphi(\Psi_{s\to t}(x_s))\,p_s(\dd x_s), \quad \forall\,\varphi\in C_b(\R^d).
+\]
+We write $p_t = (\Psi_{s\to t})_\# p_s$ when densities exist.
+\end{definition}
+
+\begin{definition}[Velocity field induced by a flow map]\label{def:vel-from-flow}
+Assume $\Psi_{0\to t}$ is differentiable in $t$ and invertible for $t\in(0,1)$.
+The \emph{velocity field} $v_t:\R^d\to\R^d$ is defined by
+\begin{equation}\label{eq:vel-from-flow}
+v_t(x) \coloneqq \partial_t \Psi_{0\to t}\!\big(\Psi_{0\to t}^{-1}(x)\big).
+\end{equation}
+Then trajectories satisfy the ODE
+\begin{equation}\label{eq:flow-ode}
+\frac{\dd}{\dd t}X_t = v_t(X_t), \qquad X_0 \sim p_0.
+\end{equation}
+\end{definition}
+
+\begin{warnbox}{Flow map $\longleftrightarrow$ ODE: rigorous correspondence}
+If $\Psi_{0\to t}$ is invertible and differentiable, then $v_t$ defined by~\eqref{eq:vel-from-flow} implies $X_t = \Psi_{0\to t}(X_0)$ solves $\dot{X}_t = v_t(X_t)$.
+Conversely, if $v_t$ is (globally) Lipschitz in $x$ (uniformly in $t$), then the ODE defines a unique flow map $\Psi_{0\to t}$ by $\Psi_{0\to t}(x_0) = X_t^{x_0}$.
+\end{warnbox}
+
+\subsection{The continuity equation}
+
+\begin{definition}[Continuity equation --- weak form]\label{def:cont-weak}
+A family of densities $(p_t)$ satisfies the continuity equation with velocity field $v_t$ if, for all $\varphi\in C_c^\infty(\R^d)$,
+\begin{equation}\label{eq:cont-weak}
+\frac{\dd}{\dd t}\int_{\R^d} \varphi(x)\,p_t(x)\dd x = \int_{\R^d} \inner{\grad\varphi(x)}{v_t(x)}\,p_t(x)\dd x.
+\end{equation}
+\end{definition}
+
+\begin{proof}[Derivation of the weak form]
+If $\dot{X}_t = v_t(X_t)$ and $\varphi\in C_c^\infty$, then by the chain rule:
+\[
+\frac{\dd}{\dd t}\varphi(X_t) = \inner{\grad\varphi(X_t)}{v_t(X_t)}.
+\]
+Taking expectations yields~\eqref{eq:cont-weak}.
+\end{proof}
+
+\begin{definition}[Continuity equation --- strong form]\label{def:cont-strong}
+If $p_t$ is smooth, integration by parts gives the strong form:
+\begin{equation}\label{eq:cont-strong}
+\partial_t p_t + \diver(p_t\,v_t) = 0.
+\end{equation}
+\end{definition}
+
+\begin{remark}[Continuity = Fokker--Planck with $g\equiv 0$]
+Setting $g(t)\equiv 0$ in the Fokker--Planck equation~\eqref{eq:fp-strong} yields exactly the continuity equation~\eqref{eq:cont-strong} with $v_t = f(\cdot,t)$.
+The continuity equation is the deterministic analogue of Fokker--Planck.
+\end{remark}
+
+\subsection{Mass conservation criterion}\label{subsec:mass-conservation}
+
+Given a prescribed density path $(p_t)$ and a velocity field $(v_t)$, we want to know: \emph{does the ODE flow induced by $v_t$ produce exactly the densities $p_t$?}
+
+\begin{theorem}[Mass conservation criterion]\label{thm:mass-conservation}
+Let $(p_t)_{t\in[0,1]}$ be a prescribed smooth density path and $v_t$ a velocity field defining the ODE $\dot{X}_t = v_t(X_t)$ with flow map $\Psi_{0\to t}$.
+Let $p_t^{\mathrm{fwd}} \coloneqq (\Psi_{0\to t})_\# p_0$ be the flow-induced density.
+Then, under standard regularity,
+\[
+p_t^{\mathrm{fwd}} = p_t \quad \text{for all } t\in[0,1]
+\]
+if and only if the pair $(p_t, v_t)$ satisfies the continuity equation:
+\[
+\partial_t p_t(x) + \grad_x\cdot\big(p_t(x)\,v_t(x)\big) = 0, \qquad \forall\,t\in[0,1],\ x\in\R^d.
+\]
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+$(\Rightarrow)$: If $p_t^{\mathrm{fwd}} = p_t$, the weak continuity equation holds because, for any test function $\varphi$,
+\[
+\frac{\dd}{\dd t}\int \varphi(x)\,p_t(x)\dd x = \frac{\dd}{\dd t}\E[\varphi(X_t)] = \E[\inner{\grad\varphi(X_t)}{v_t(X_t)}] = \int \inner{\grad\varphi(x)}{v_t(x)}\,p_t(x)\dd x.
+\]
+$(\Leftarrow)$: If $(p_t,v_t)$ satisfies the continuity equation, then $p_t$ and $p_t^{\mathrm{fwd}}$ both solve the same linear PDE (the continuity equation) with the same initial condition $p_0$.
+Under uniqueness of weak solutions (guaranteed by Lipschitz regularity of $v_t$), they must coincide.
+\end{proof}
+
+\begin{keybox}{Why the continuity equation is the underlying rule}
+The continuity equation is the single PDE criterion ensuring that a velocity field $v_t$ generates the correct density path $p_t$.
+It is the \emph{underlying rule} connecting:
+\begin{itemize}[nosep]
+\item The probability-flow ODE in diffusion models (Section~\ref{sec:sde-ode-bridge}).
+\item The flow matching ODE (Section~\ref{sec:fm-framework}).
+\item The conditional-to-marginal construction (Proposition~\ref{prop:marg-vf-generates}).
+\end{itemize}
+\end{keybox}
+
+\begin{remark}[Non-uniqueness of $v_t$ for a given $p_t$]
+The continuity equation $\partial_t p_t + \diver(p_t v_t) = 0$ is one scalar equation for $d$ components of $v_t$: it is underdetermined.
+If $v_t$ is a solution and $\tilde{v}_t$ satisfies $\diver(p_t \tilde{v}_t)=0$ (divergence-free with respect to $p_t$), then $v_t + \tilde{v}_t$ also solves the same equation.
+Flow matching resolves this non-uniqueness by \emph{constructing} a particular $v_t$ via conditional fields and regression, rather than solving the PDE directly.
+\end{remark}
+
+% =====================================================================================
+\section{The SDE/ODE bridge}\label{sec:sde-ode-bridge}
+
+We now establish the central PDE-level result: given a stochastic process with known marginals, one can construct deterministic and stochastic dynamics sharing the same marginals, using only the score function.
+
+\subsection{Probability-flow ODE}\label{subsec:pf-ode}
+
+\begin{theorem}[Probability-flow ODE]\label{thm:pf-ode}
+Let $(p_t)$ be the marginal densities of the forward SDE~\eqref{eq:forward-sde}, assumed smooth and strictly positive for $t\in(0,T)$.
+Define the ODE
+\begin{equation}\label{eq:pf-ode}
+\frac{\dd}{\dd t}\tilde{X}_t = f(\tilde{X}_t,t) - \frac{g(t)^2}{2}\,\grad_x\log p_t(\tilde{X}_t).
+\end{equation}
+Then $\tilde{X}_t$ has the same time-marginal densities $p_t$ as the SDE, under standard PDE uniqueness.
+\end{theorem}
+
+\begin{proof}
+The SDE density satisfies Fokker--Planck:
+\[
+\partial_t p_t = -\diver(p_t f) + \frac{g(t)^2}{2}\,\Delta p_t.
+\]
+The ODE~\eqref{eq:pf-ode} has drift $\tilde{f} = f - \frac{g^2}{2}s$ (where $s = \grad\log p_t$), so its density satisfies the continuity equation:
+\[
+\partial_t \tilde{p}_t = -\diver\!\Big(\tilde{p}_t\big(f - \tfrac{g^2}{2}s\big)\Big) = -\diver(\tilde{p}_t f) + \frac{g^2}{2}\diver(\tilde{p}_t s).
+\]
+By the score--Laplacian identity~\eqref{eq:score-lap}, $\diver(p_t s) = \Delta p_t$.
+Provided $\tilde{p}_t = p_t$, the right-hand side becomes $-\diver(p_t f) + \frac{g^2}{2}\Delta p_t$, which equals $\partial_t p_t$ by Fokker--Planck.
+Hence $p_t$ satisfies the continuity equation for $\tilde{f}$, and by uniqueness, $\tilde{p}_t = p_t$.
+\end{proof}
+
+\begin{insightbox}{The probability-flow ODE in words}
+The PF-ODE removes all stochasticity from the forward SDE while preserving marginal distributions.
+The ``missing'' diffusion is exactly compensated by a deterministic score correction $-\frac{g^2}{2}\grad\log p_t$.
+This is possible because $\diver(p\,\grad\log p) = \Delta p$: the score encodes precisely the density-level effect of diffusion.
+\end{insightbox}
+
+\subsection{Reverse-time SDE}\label{subsec:reverse-sde}
+
+\begin{theorem}[Reverse-time SDE]\label{thm:reverse-sde}
+Let $(p_t)$ be the marginal densities of the forward SDE~\eqref{eq:forward-sde} with $X_0 \sim p_{\mathrm{data}}$.
+Define the reversed-time density $\tilde{p}_\tau(x) \coloneqq p_{T-\tau}(x)$ for $\tau\in[0,T]$.
+The reverse-time SDE
+\begin{equation}\label{eq:reverse-sde}
+\dd \bar{X}_\tau = \Big[-f(\bar{X}_\tau, T-\tau) + g(T-\tau)^2\,\grad\log p_{T-\tau}(\bar{X}_\tau)\Big]\dd\tau + g(T-\tau)\dd\bar{W}_\tau,
+\end{equation}
+with $\bar{X}_0 \sim p_T$, has marginal densities $\tilde{p}_\tau = p_{T-\tau}$.
+\end{theorem}
+
+\begin{proof}
+Since $\tilde{p}_\tau = p_{T-\tau}$, we have $\partial_\tau \tilde{p}_\tau = -\partial_t p_t\big|_{t=T-\tau}$.
+Using the forward Fokker--Planck:
+\[
+\partial_\tau \tilde{p}_\tau = \diver(\tilde{p}_\tau\,f(\cdot,T-\tau)) - \frac{g(T-\tau)^2}{2}\Delta\tilde{p}_\tau.
+\]
+On the other hand, if~\eqref{eq:reverse-sde} holds with drift $\tilde{h}$, then $\tilde{p}_\tau$ must satisfy
+\[
+\partial_\tau \tilde{p}_\tau = -\diver(\tilde{p}_\tau\,\tilde{h}) + \frac{g(T-\tau)^2}{2}\Delta\tilde{p}_\tau.
+\]
+Equating and using $\Delta\tilde{p}_\tau = \diver(\tilde{p}_\tau\grad\log\tilde{p}_\tau)$ yields
+\[
+\tilde{h}(x,\tau) = -f(x,T-\tau) + g(T-\tau)^2\grad\log p_{T-\tau}(x),
+\]
+which is the drift in~\eqref{eq:reverse-sde}.
+\end{proof}
+
+\begin{remark}
+In the original time variable $t$ (decreasing from $T$ to $0$), the reverse SDE reads:
+\[
+\dd X_t = \big[f(X_t,t) - g(t)^2\,\grad\log p_t(X_t)\big]\dd t + g(t)\dd\bar{W}_t,
+\]
+where the correction $-g^2 s$ appears with coefficient $1$ (not $\frac{1}{2}$ as in the PF-ODE) because the diffusion term contributes an additional $+\frac{g^2}{2}s$ to the Fokker--Planck balance.
+\end{remark}
+
+\subsection{A continuum of marginal-preserving SDEs}\label{subsec:marginal-family}
+
+\begin{theorem}[Marginal-preserving SDE family]\label{thm:marginal-family}
+Assume $(p_t)$ is smooth and strictly positive and satisfies the continuity equation with velocity field $v_t$:
+\[
+\partial_t p_t + \diver(p_t\,v_t) = 0.
+\]
+Let $\gamma(t)\ge 0$ be any scalar schedule.
+Define the SDE
+\begin{equation}\label{eq:marginal-family}
+\dd X_t = b(X_t,t)\dd t + \gamma(t)\dd B_t, \qquad X_0 \sim p_0,
+\end{equation}
+with drift
+\begin{equation}\label{eq:marginal-family-drift}
+b(x,t) \coloneqq v_t(x) + \frac{\gamma(t)^2}{2}\,\grad\log p_t(x).
+\end{equation}
+Then $(p_t)$ also satisfies the Fokker--Planck equation for~\eqref{eq:marginal-family}.
+In particular, $\law(X_t) = p_t$ for all $t$.
+\end{theorem}
+
+\begin{proof}
+The Fokker--Planck right-hand side for~\eqref{eq:marginal-family} is:
+\[
+-\diver(p_t b) + \frac{\gamma^2}{2}\Delta p_t
+= -\diver(p_t v_t) - \frac{\gamma^2}{2}\diver(p_t\,s) + \frac{\gamma^2}{2}\Delta p_t.
+\]
+By $\diver(p_t s) = \Delta p_t$, the last two terms cancel, leaving $-\diver(p_t v_t) = \partial_t p_t$.
+\end{proof}
+
+\begin{summarybox}{Three key dynamics from one density path}
+Given a density path $(p_t)$ with score $s(\cdot,t) = \grad\log p_t$:
+\begin{enumerate}[nosep]
+\item \textbf{ODE} ($\gamma\equiv 0$): $\dd X_t = v_t(X_t)\dd t$ \hfill (deterministic, PF-ODE)
+\item \textbf{Reverse SDE} ($\gamma = g$): the canonical Anderson reversal.
+\item \textbf{General SDE} (arbitrary $\gamma$): interpolates between deterministic and stochastic.
+\end{enumerate}
+All three share the same marginal densities $p_t$, by Theorem~\ref{thm:marginal-family}.
+\end{summarybox}
+
+\newpage
+% =====================================================================================
+%  PART II: FLOW MATCHING FRAMEWORK
+% =====================================================================================
+
+\part{Flow Matching Framework}
+
+% =====================================================================================
+\section{From diffusion insights to the general framework}\label{sec:fm-framework}
+
+\subsection{Lesson from score-based diffusion}\label{subsec:lesson-diffusion}
+
+Before defining flow matching in full generality, we extract the key structural insights from diffusion models (Chapter~\ref{sec:sde-ode-bridge}).
+The construction of a diffusion-based generative model follows three steps:
+
+\paragraph{Step 1: A conditional path and its marginal densities.}
+A diffusion model defines a family of densities $(p_t)_{t\in[0,1]}$ via a forward conditional distribution
+\begin{equation}\label{eq:diff-cond-path}
+p_t(x_t\mid x_0) = \cN(x_t;\,\alpha_t x_0,\,\sigma_t^2 \Id), \qquad x_0\sim p_{\mathrm{data}},
+\end{equation}
+which induces the marginal density $p_t(x_t) = \int p_t(x_t\mid x_0)\,p_{\mathrm{data}}(x_0)\dd x_0$.
+The increasing variance $\sigma_t^2$ drives $p_t$ toward a Gaussian prior.
+
+\paragraph{Step 2: A velocity field from the Fokker--Planck equation.}
+The marginal $p_t$ evolves according to a velocity field $v_t(x) = f(t)x - \frac{1}{2}g^2(t)\grad\log p_t(x)$, derived from the probability-flow ODE (Theorem~\ref{thm:pf-ode}).
+The ODE $\dot{x}(t) = v_t(x(t))$ transports samples along $(p_t)$.
+The underlying PDE ensuring this alignment is the continuity equation (Theorem~\ref{thm:mass-conservation}).
+
+\paragraph{Step 3: Learning via the conditional strategy.}
+Since $\grad\log p_t(x_t)$ is intractable, we exploit the tractable conditional score $\grad\log p_t(x_t\mid x_0)$.
+The key identity
+\[
+\grad\log p_t(x_t) = \E_{x_0\sim p(\cdot\mid x_t)}\!\big[\grad\log p_t(x_t\mid x_0)\big]
+\]
+shows that marginal scores are conditional expectations of conditional scores.
+Training with conditional targets (denoising score matching) differs from the marginal objective only by a $\theta$-independent constant.
+
+\begin{keybox}{The three-step pattern}
+\begin{enumerate}[nosep]
+\item \textbf{Define} a conditional path $p_t(\cdot\mid z)$ and its marginal $p_t = \int p_t(\cdot\mid z)\pi(z)\dd z$.
+\item \textbf{Identify} a velocity field $v_t$ such that $(p_t, v_t)$ satisfies the continuity equation.
+\item \textbf{Learn} $v_t$ by regressing against tractable conditional targets $v_t(\cdot\mid z)$.
+\end{enumerate}
+Flow matching generalizes this pattern to \emph{arbitrary} source and target distributions.
+\end{keybox}
+
+\subsection{The flow matching framework}\label{subsec:fm-general}
+
+We now present the FM framework in its full generality, following the same three-step structure.
+
+\paragraph{Setup.}
+Let $p_{\mathrm{src}}$ and $p_{\mathrm{tgt}}$ be two distributions on $\R^d$ (source and target), both easy to sample from.
+We set $p_0 = p_{\mathrm{src}}$ and $p_1 = p_{\mathrm{tgt}}$.
+The generation task (source = Gaussian prior, target = data) is a special case.
+
+\subsubsection{Step 1: Conditional path and its marginal densities}
+
+FM implicitly defines a continuous family $(p_t)_{t\in[0,1]}$ interpolating between the endpoints.
+Each marginal $p_t$ is expressed via a latent variable $z\sim\pi(z)$ and a conditional distribution $p_t(\cdot\mid z)$:
+\begin{equation}\label{eq:fm-marginal}
+p_t(x_t) = \int p_t(x_t\mid z)\,\pi(z)\dd z,
+\end{equation}
+with $(\pi, \{p_t(\cdot\mid z)\})$ chosen to satisfy the boundary conditions $p_0 = p_{\mathrm{src}}$, $p_1 = p_{\mathrm{tgt}}$.
+
+Common choices for the latent variable $z$:
+\begin{itemize}[nosep]
+\item \textbf{Two-sided conditioning}: $z = (x_0, x_1)$ with $\pi = p_{\mathrm{src}}(x_0)\,p_{\mathrm{tgt}}(x_1)$.
+\item \textbf{One-sided conditioning}: $z = x_1 \sim p_{\mathrm{tgt}}$ (or $z = x_0\sim p_{\mathrm{src}}$), recovering diffusion-like setups when $p_{\mathrm{src}}$ is Gaussian.
+\end{itemize}
+
+\subsubsection{Step 2: Velocity field}
+
+The goal is to find a velocity field $v_t(x)$ such that the ODE
+\begin{equation}\label{eq:fm-ode}
+\frac{\dd x(t)}{\dd t} = v_t(x(t)), \qquad x(0)\sim p_{\mathrm{src}},
+\end{equation}
+produces marginal distributions matching $p_t$ at each time $t$.
+By Theorem~\ref{thm:mass-conservation}, this requires $(p_t, v_t)$ to satisfy the continuity equation:
+\begin{equation}\label{eq:fm-cont}
+\partial_t p_t(x) + \grad_x\cdot\big(p_t(x)\,v_t(x)\big) = 0.
+\end{equation}
+As noted in Section~\ref{subsec:mass-conservation}, $v_t$ is not unique for a given $p_t$.
+FM seeks one particular solution by marginalization of conditional velocity fields.
+
+\subsubsection{Step 3: Learning via the conditional strategy}
+
+\paragraph{Conditional velocity field.}
+For each $z$, we define (or derive) a conditional velocity field $v_t(\cdot\mid z)$ such that the conditional ODE
+\[
+\dot{X}_t = v_t(X_t\mid z), \qquad X_0\sim p_0(\cdot\mid z),
+\]
+generates $p_t(\cdot\mid z)$.
+
+\paragraph{Marginal velocity by marginalization.}
+The marginal velocity field is defined as
+\begin{equation}\label{eq:marg-vf}
+v_t(x) \coloneqq \int v_t(x\mid z)\,\frac{p_t(x\mid z)\,\pi(z)}{p_t(x)}\dd z = \E_{z\sim p(\cdot\mid x_t=x)}\!\big[v_t(x\mid z)\big].
+\end{equation}
+
+\paragraph{FM and CFM losses.}
+The FM loss is
+\[
+\mathcal{L}_{\mathrm{FM}}(\theta) = \E_{t,\,x_t\sim p_t}\!\big[\norm{v_\theta(x_t,t) - v_t(x_t)}^2\big],
+\]
+which is intractable because $v_t$ involves an expectation over the posterior $p(z\mid x_t)$.
+The \emph{conditional} FM loss is
+\begin{equation}\label{eq:cfm-loss}
+\mathcal{L}_{\mathrm{CFM}}(\theta) = \E_{t,\,z\sim\pi,\,x_t\sim p_t(\cdot\mid z)}\!\big[\norm{v_\theta(x_t,t) - v_t(x_t\mid z)}^2\big].
+\end{equation}
+We prove below that these two losses have the same gradient and the same minimizer.
+
+\subsection{The marginalization trick}\label{subsec:marg-trick}
+
+\begin{proposition}[Marginal velocity field generates the marginal path]\label{prop:marg-vf-generates}
+If each conditional velocity field $v_t(\cdot\mid z)$ generates $p_t(\cdot\mid z)$ (i.e., satisfies $\partial_t p_t(\cdot\mid z) + \diver(p_t(\cdot\mid z)\,v_t(\cdot\mid z)) = 0$), then the marginal velocity field $v_t$ defined by~\eqref{eq:marg-vf} generates the marginal path $p_t$.
+\end{proposition}
+
+\begin{proof}
+Fix $\varphi\in C_c^\infty(\R^d)$.
+For each $z$, the conditional continuity equation in weak form gives:
+\[
+\frac{\dd}{\dd t}\int \varphi(x)\,p_t(x\mid z)\dd x = \int \inner{\grad\varphi(x)}{v_t(x\mid z)}\,p_t(x\mid z)\dd x.
+\]
+Multiply by $\pi(z)$ and integrate over $z$:
+\[
+\frac{\dd}{\dd t}\int \varphi(x)\underbrace{\Big(\int p_t(x\mid z)\pi(z)\dd z\Big)}_{p_t(x)}\dd x
+= \int \inner{\grad\varphi(x)}{\underbrace{\int v_t(x\mid z)\,p_t(x\mid z)\,\pi(z)\dd z}_{v_t(x)\,p_t(x)}}\dd x.
+\]
+This is exactly the weak continuity equation for $(p_t, v_t)$.
+By Theorem~\ref{thm:mass-conservation}, the ODE flow of $v_t$ generates $p_t$.
+\end{proof}
+
+\begin{keybox}{The marginalization trick in one line}
+\[
+v_t(x) = \E\!\big[v_t(x\mid Z)\,\big|\,X_t = x\big].
+\]
+This identity converts a family of tractable conditional velocity fields into a single marginal velocity field that generates the correct marginal density path.
+\end{keybox}
+
+\subsection{CFM and FM have the same gradient}\label{subsec:cfm-fm-equiv}
+
+\begin{lemma}[Variance decomposition for regression]\label{lem:var-decomp}
+Let $A$ be square-integrable and $X$ any random variable.
+For any measurable predictor $f(X)$,
+\[
+\E\!\big[\norm{f(X)-A}^2\big] = \E\!\big[\norm{f(X)-\E[A\mid X]}^2\big] + \E\!\big[\norm{A-\E[A\mid X]}^2\big].
+\]
+\end{lemma}
+
+\begin{proof}
+Expand $\norm{f-A}^2 = \norm{(f-\E[A\mid X]) + (\E[A\mid X]-A)}^2$ and note that the cross term has zero expectation because $\E[A - \E[A\mid X]\mid X] = 0$.
+\end{proof}
+
+\begin{theorem}[Equivalence of CFM and FM]\label{thm:cfm-fm}
+Let $v_t(x) = \E[v_t(x\mid Z)\mid X_t = x]$ be the marginal velocity.
+Then
+\[
+\mathcal{L}_{\mathrm{CFM}}(\theta) = \mathcal{L}_{\mathrm{FM}}(\theta) + C,
+\]
+where $C$ does not depend on $\theta$.
+In particular, $\nabla_\theta\mathcal{L}_{\mathrm{CFM}} = \nabla_\theta\mathcal{L}_{\mathrm{FM}}$, and the unique minimizer satisfies
+\[
+v^*_\theta(x_t,t) = v_t(x_t) = \E\!\big[v_t(x_t\mid Z)\,\big|\,X_t = x_t\big].
+\]
+\end{theorem}
+
+\begin{proof}
+Apply Lemma~\ref{lem:var-decomp} with $A = v_t(X_t\mid Z)$, $X = X_t$, and $f = v_\theta(\cdot,t)$.
+Then $\E[A\mid X_t] = v_t(X_t)$ by definition~\eqref{eq:marg-vf}, and the residual term $\E[\norm{A - \E[A\mid X_t]}^2]$ is $\theta$-independent.
+\end{proof}
+
+\begin{resultbox}{Practical meaning}
+Training with tractable conditional targets $v_t(\cdot\mid z)$ (CFM) is not an approximation.
+It is an exactly justified surrogate: same gradients, same minimizer as training with the intractable marginal target $v_t$.
+This is the same principle as denoising score matching in diffusion models.
+\end{resultbox}
+
+\newpage
+% =====================================================================================
+%  PART III: CONSTRUCTING PATHS AND VELOCITIES
+% =====================================================================================
+
+\part{Constructing Probability Paths and Velocity Fields}
+
+% =====================================================================================
+\section{Warm-up: Gaussian-to-Gaussian bridge}\label{sec:gauss-bridge}
+
+When both $p_{\mathrm{src}}$ and $p_{\mathrm{tgt}}$ are Gaussian, the marginal density and velocity can be computed analytically.
+This serves as a template for the general conditional construction.
+
+Consider the interpolated Gaussian path:
+\begin{equation}\label{eq:gauss-path}
+p_t(x) = \cN\!\big(x;\,\mu(t),\,\sigma(t)^2 \Id\big),
+\end{equation}
+with endpoints $p_0 = \cN(\mu(0), \sigma(0)^2\Id)$ and $p_1 = \cN(\mu(1), \sigma(1)^2\Id)$.
+
+A natural affine flow map realizing this path is:
+\begin{equation}\label{eq:gauss-flow}
+\Psi_{0\to t}(x) = \mu(t) + \frac{\sigma(t)}{\sigma(0)}\big(x - \mu(0)\big).
+\end{equation}
+If $x\sim p_0$, then $\Psi_{0\to t}(x) \sim \cN(\mu(t), \sigma(t)^2\Id) = p_t$.
+
+\begin{proposition}[Velocity field for a Gaussian density path]\label{prop:gauss-velocity}
+The velocity field generating the flow~\eqref{eq:gauss-flow} is:
+\begin{equation}\label{eq:gauss-velocity}
+v_t(x) = \frac{\sigma'(t)}{\sigma(t)}\big(x - \mu(t)\big) + \mu'(t).
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Differentiate $\Psi_{0\to t}(y)$ in $t$:
+$\Psi'_{0\to t}(y) = \mu'(t) + \frac{\sigma'(t)}{\sigma(0)}(y - \mu(0))$.
+The inverse is $y = \Psi_{t\to 0}(x) = \mu(0) + \frac{\sigma(0)}{\sigma(t)}(x - \mu(t))$.
+Substituting:
+$v_t(x) = \Psi'_{0\to t}(\Psi_{t\to 0}(x)) = \mu'(t) + \frac{\sigma'(t)}{\sigma(t)}(x - \mu(t))$.
+\end{proof}
+
+\begin{remark}[Two perspectives on uniqueness]
+For a \emph{fixed flow map} $\Psi_{0\to t}$, the velocity is uniquely determined by $v_t = \partial_t\Psi_{0\to t}\circ\Psi_{0\to t}^{-1}$.
+For a \emph{fixed density path} $p_t$ (without fixing $\Psi_{0\to t}$), the velocity is not unique: the continuity equation admits infinitely many solutions.
+This distinction precisely characterizes the difference between the flow-first and probability-path-first perspectives below.
+\end{remark}
+
+% =====================================================================================
+\section{Probability-path-first construction (Eulerian view)}\label{sec:path-first}
+
+\textbf{Principle:} Choose a conditional probability path $p_t(\cdot\mid z)$ first, then derive the conditional velocity $v_t(\cdot\mid z)$.
+
+\subsection{One-sided conditioning ($z = x_1 \sim p_{\mathrm{tgt}}$)}
+
+Fix $x_1\sim p_{\mathrm{tgt}}$.
+Define the conditional Gaussian path:
+\begin{equation}\label{eq:one-sided-path}
+p_t(x_t\mid x_1) = \cN\!\big(x_t;\,b_t x_1,\,a_t^2 \Id\big),
+\end{equation}
+with boundary conditions $a_0 = 1,\,b_0 = 0$ and $a_1 = 0,\,b_1 = 1$ (the limit $a_1\to 0$ concentrates $p_1(\cdot\mid x_1)$ at $\delta_{x_1}$).
+
+At the boundaries: $p_0(\cdot\mid x_1) = \cN(0,\Id)$ (independent of $x_1$) and $p_1(\cdot\mid x_1) = \delta(\cdot - x_1)$.
+Marginalizing: $p_0 = \cN(0,\Id) = p_{\mathrm{src}}$ and $p_1 = p_{\mathrm{tgt}}$.
+
+Applying Proposition~\ref{prop:gauss-velocity} to the conditional Gaussian path~\eqref{eq:one-sided-path} (with $\mu(t) = b_t x_1$ and $\sigma(t) = a_t$):
+
+\begin{proposition}[Conditional velocity for one-sided path-first construction]\label{prop:one-sided-vf}
+For $t\in(0,1)$ with $a_t > 0$:
+\begin{equation}\label{eq:one-sided-vf}
+v_t(x\mid x_1) = b_t' x_1 + \frac{a_t'}{a_t}(x - b_t x_1).
+\end{equation}
+\end{proposition}
+
+\paragraph{CFM loss.}
+Sampling $x_t = a_t\varepsilon + b_t x_1$ with $\varepsilon\sim\cN(0,\Id)$, the CFM loss becomes:
+\begin{equation}\label{eq:one-sided-cfm}
+\mathcal{L}_{\mathrm{CFM}} = \E_{t,\,x_1\sim p_{\mathrm{tgt}},\,x_t\sim p_t(\cdot\mid x_1)}\!\bigg[\bigg\|v_\theta(x_t,t) - \Big[b_t' x_1 + \frac{a_t'}{a_t}(x_t - b_t x_1)\Big]\bigg\|^2\bigg].
+\end{equation}
+
+\paragraph{On paired samples.}
+Writing $x_0 = \varepsilon$ and $x_t = a_t x_0 + b_t x_1$, the conditional velocity simplifies to $v_t(x_t\mid x_1) = a_t' x_0 + b_t' x_1$, which is the time derivative of the interpolation $x_t$.
+
+\subsection{Two-sided conditioning ($z = (x_0, x_1)$)}
+
+Let $z = (x_0, x_1)$ with $x_0\sim p_{\mathrm{src}}$, $x_1\sim p_{\mathrm{tgt}}$ independently.
+Define:
+\begin{equation}\label{eq:two-sided-path}
+p_t(x_t\mid x_0, x_1) = \cN\!\big(x_t;\,a_t x_0 + b_t x_1,\,\sigma^2 \Id\big),
+\end{equation}
+with $a_0=1,\,b_0=0,\,a_1=0,\,b_1=1$.
+In the deterministic limit $\sigma=0$: $p_t(\cdot\mid x_0,x_1) = \delta(\cdot - (a_t x_0 + b_t x_1))$.
+
+\begin{proposition}[Conditional velocity for two-sided construction]
+\begin{equation}\label{eq:two-sided-vf}
+v_t(x\mid x_0,x_1) = a_t' x_0 + b_t' x_1.
+\end{equation}
+\end{proposition}
+
+The CFM loss (with $\sigma=0$, so $x_t = a_t x_0 + b_t x_1$):
+\[
+\mathcal{L}_{\mathrm{CFM}} = \E_{t,\,x_0\sim p_{\mathrm{src}},\,x_1\sim p_{\mathrm{tgt}}}\!\big[\norm{v_\theta(x_t,t) - (a_t' x_0 + b_t' x_1)}^2\big].
+\]
+
+\begin{remark}[Same minimizer for one-sided and two-sided]
+On paired samples $(x_0, x_1)$ with $x_t = a_t x_0 + b_t x_1$, both the one-sided target $v_t(x_t\mid x_1) = a_t' x_0 + b_t' x_1$ and the two-sided target coincide.
+The optimal velocity field is:
+\[
+v^*(x,t) = \E\!\big[a_t' X_0 + b_t' X_1\,\big|\,X_t = x\big].
+\]
+\end{remark}
+
+\subsection{Gaussian FM = Diffusion}
+
+When $p_{\mathrm{src}} = \cN(0,\Id)$, the one-sided conditioning on $z = x_1\sim p_{\mathrm{data}}$ with Gaussian conditional paths is called \emph{Gaussian FM}.
+Under the relabeling $a_t \mapsto \sigma_t$, $b_t \mapsto \alpha_t$ (matching diffusion notation), this is exactly the diffusion model trained to predict the velocity.
+
+The canonical choice $a_t = 1-t$, $b_t = t$ (equivalently $\sigma_t = 1-t$, $\alpha_t = t$) gives the FM/Rectified Flow schedule with CFM target $v_t(x_t\mid x_1) = x_1 - x_0$.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{} l c c c c @{}}
+\toprule
+& \textbf{VE} & \textbf{VP} & \textbf{FM/RF} & \textbf{Trigonometric} \\
+\midrule
+$a_t$ (source coeff.) & $a_t$ & $\sqrt{1-b_t^2}$ & $1-t$ & $\cos(\frac{\pi}{2}t)$ \\
+$b_t$ (target coeff.) & $1$ & $b_t$ & $t$ & $\sin(\frac{\pi}{2}t)$ \\
+$a_0,\,b_0$ & $\cdot,\,1$ & $\cdot,\,1$ & $1,\,0$ & $1,\,0$ \\
+$a_1,\,b_1$ & $a_1,\,1$ & $0,\,\cdot$ & $0,\,1$ & $0,\,1$ \\
+$p_{\mathrm{src}}$ & $\cN(0,a_1^2\Id)$ & $\cN(0,\Id)$ & $\cN(0,\Id)$ & $\cN(0,\Id)$ \\
+\bottomrule
+\end{tabular}
+\caption{Common interpolant schedules in the FM convention $x_t = a_t x_0 + b_t x_1$, where $x_0\sim p_{\mathrm{src}}$ and $x_1\sim p_{\mathrm{tgt}}$.}
+\label{tab:schedules}
+\end{table}
+
+% =====================================================================================
+\section{Flow-first construction (Lagrangian view)}\label{sec:flow-first}
+
+\textbf{Principle:} Specify a conditional flow map $\Psi_{0\to t}(\cdot\mid z)$ directly, then derive the conditional velocity by time-differentiation along trajectories.
+
+\subsection{Conditional affine flow}
+
+Fix $z\sim\pi$ and define the time-varying conditional affine flow:
+\begin{equation}\label{eq:cond-affine-flow}
+\Psi_{0\to t}(x_0\mid z) \coloneqq \mu_t(z) + A_t(z)\,x_0,
+\end{equation}
+where $\mu_t(z)\in\R^d$ and $A_t(z)\in\R^{d\times d}$ is invertible for $t\in(0,1)$.
+Boundary: $A_0(z) = \Id$, $\mu_0(z) = 0$ (recovers $p_{\mathrm{src}}$ at $t=0$).
+
+\paragraph{Induced conditional path.}
+$p_t(\cdot\mid z) = (\Psi_{0\to t}(\cdot\mid z))_\# p_{\mathrm{src}}$.
+Sampling: draw $x_0\sim p_{\mathrm{src}}$, set $x_t = \mu_t(z) + A_t(z)\,x_0$.
+
+\paragraph{Derived conditional velocity.}
+The conditional velocity is obtained by differentiating the flow map along its trajectory:
+\begin{equation}\label{eq:flow-first-vf}
+v_t(x\mid z) = \frac{\dd}{\dd t}\Psi_{0\to t}\!\big(\Psi_{t\to 0}(x\mid z)\mid z\big).
+\end{equation}
+Since $x = \mu_t(z) + A_t(z)\,x_0$, we have $x_0 = A_t(z)^{-1}(x - \mu_t(z))$, giving:
+\begin{equation}\label{eq:cond-affine-vf}
+v_t(x\mid z) = \mu_t'(z) + A_t'(z)\,A_t(z)^{-1}\big(x - \mu_t(z)\big).
+\end{equation}
+
+\subsection{One-sided ($z = x_1$)}
+
+Set $\mu_t(z) = b_t x_1$ and $A_t(z) = a_t \Id$ with $a_0=1$, $b_0=0$, $a_1=0$, $b_1=1$:
+\[
+x_t = a_t x_0 + b_t x_1, \qquad v_t(x\mid x_1) = b_t' x_1 + \frac{a_t'}{a_t}(x - b_t x_1).
+\]
+On paired samples: $v_t(x_t\mid x_1) = a_t' x_0 + b_t' x_1$, recovering the same CFM target as the path-first approach.
+
+\subsection{Two-sided ($z = (x_0, x_1)$)}
+
+With $\mu_t(x_0,x_1) = b_t x_1$ and $A_t = a_t \Id$:
+\[
+x_t = a_t x_0 + b_t x_1, \qquad v_t(x_t\mid x_0,x_1) = a_t' x_0 + b_t' x_1.
+\]
+
+\subsection{Recovery of the Gaussian bridge}
+
+If $\mu_t$ is independent of $z$ (denoted $\mu(t)$) and $A_t = \frac{\sigma(t)}{\sigma(0)}\Id$, then
+\[
+\Psi_{0\to t}(x_0) = \mu(t) + \frac{\sigma(t)}{\sigma(0)}(x_0 - \mu(0) + \mu(0)) = \mu(t) + \frac{\sigma(t)}{\sigma(0)}(x_0 - \mu(0)),
+\]
+and $v_t(x) = \mu'(t) + \frac{\sigma'(t)}{\sigma(t)}(x - \mu(t))$, recovering the Gaussian bridge velocity of Proposition~\ref{prop:gauss-velocity}.
+
+% =====================================================================================
+\section{Path-first vs.\ flow-first: comparison}\label{sec:comparison}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabular}{@{} >{\bfseries}p{2.5cm} p{5.5cm} p{5.5cm} @{}}
+\toprule
+Axis & \textbf{Path-First (Eulerian)} & \textbf{Flow-First (Lagrangian)} \\
+\midrule
+Given & Conditional density path $p_t(\cdot\mid z)$ & Conditional flow map $\Psi_{0\to t}(\cdot\mid z)$ \\
+\addlinespace
+Derive & Velocity $v_t(\cdot\mid z)$ by solving the continuity equation for $p_t(\cdot\mid z)$ & Velocity $v_t(x\mid z) = \partial_t\Psi_{0\to t}(\Psi_{t\to 0}(x\mid z)\mid z)$ \\
+\addlinespace
+Uniqueness of $v_t$ & Not unique for a given $p_t(\cdot\mid z)$ (one scalar PDE, $d$ unknowns) & Unique given $\Psi_{0\to t}(\cdot\mid z)$ \\
+\addlinespace
+Realizability & Must verify the constructed $v_t$ satisfies the continuity equation & Holds by construction: $p_t(\cdot\mid z) = (\Psi_{0\to t})_\# p_0(\cdot\mid z)$ \\
+\addlinespace
+Closed form & Convenient when $p_t(\cdot\mid z)$ is Gaussian / exponential family & Convenient when $\Psi_{0\to t}$ has structure (affine, geodesic) \\
+\addlinespace
+Preferred use & Diffusion-style constructions; analytic conditional Gaussians & Structural priors on trajectories; boundary control; manifolds \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of the two complementary perspectives for constructing conditional paths and velocities.}
+\label{tab:path-vs-flow}
+\end{table}
+
+\begin{warnbox}{Takeaway}
+Path-first is natural when conditional paths admit closed-form velocities (e.g., Gaussians).
+Flow-first is natural when you have strong structural priors on trajectories (e.g., affine maps, geodesics on manifolds).
+Both yield equivalent transport under regularity and lead to the same CFM training objective.
+\end{warnbox}
+
+\newpage
+% =====================================================================================
+%  PART IV: GAUSSIAN PATHS, SCORES, AND FULL UNIFICATION
+% =====================================================================================
+
+\part{Gaussian Paths, Scores, and Full Unification}
+
+In Parts~II and~III we developed the FM framework in full generality: conditional paths, conditional velocity fields, the marginalization trick, and CFM training.
+We now specialize to \emph{affine Gaussian} paths, the setting where FM and diffusion models coincide.
+The goal of this part is threefold:
+\begin{enumerate}[nosep]
+\item Show how forward diffusion SDEs produce the affine Gaussian conditional structure.
+\item Derive, in a single pass, all score-based identities and the algebraic equivalences among the four prediction types ($\varepsilon$, $x$, score, $v$).
+\item State the FM~=~Diffusion equivalence as a clean theorem.
+\end{enumerate}
+
+% =====================================================================================
+\section{From forward SDEs to affine Gaussian schedules}\label{sec:linear-sde}
+
+This section answers a natural question: \emph{where do the schedules $(\alpha_t,\sigma_t)$ come from?}
+The answer: they are the mean and noise coefficients of the Gaussian conditional law of a linear forward SDE.
+
+\subsection{Linear SDE and its Gaussian conditional law}
+
+Consider the linear SDE:
+\begin{equation}\label{eq:linear-sde}
+\dd Z_t = f_t Z_t\dd t + g_t\dd B_t, \qquad Z_0\sim p_{\mathrm{data}},\qquad t\in[0,T],
+\end{equation}
+with scalar $f_t\in\R$ and $g_t\ge 0$.
+
+\begin{definition}[Mean coefficient and noise scale]\label{def:alpha-sigma-sde}
+\begin{equation}\label{eq:alpha-sde}
+\alpha_t \coloneqq \exp\!\Big(\int_0^t f_s\dd s\Big), \qquad
+\sigma_t^2 \coloneqq \alpha_t^2\int_0^t g_s^2\,\alpha_s^{-2}\dd s.
+\end{equation}
+\end{definition}
+
+\begin{lemma}[Gaussian conditional law]\label{lem:linear-sde-gauss}
+The unique strong solution of~\eqref{eq:linear-sde} is $Z_t = \alpha_t Z_0 + \alpha_t\int_0^t \alpha_s^{-1}g_s\dd B_s$.
+Conditionally on $Z_0$:
+\begin{equation}\label{eq:linear-cond}
+Z_t\mid Z_0 \;\stackrel{d}{=}\; \alpha_t Z_0 + \sigma_t\varepsilon, \qquad \varepsilon\sim\cN(0,\Id).
+\end{equation}
+Moreover, $\sigma_t^2$ satisfies $\dot\sigma_t^2 = 2f_t\sigma_t^2 + g_t^2$, $\sigma_0^2 = 0$.
+\end{lemma}
+
+\begin{proof}
+Apply It\^o to $\alpha_t^{-1}Z_t$ using $\dot\alpha_t = f_t\alpha_t$:
+$\dd(\alpha_t^{-1}Z_t) = \alpha_t^{-1}g_t\dd B_t$.
+Integrate and use It\^o isometry to compute the variance.
+\end{proof}
+
+\begin{keybox}{The Gaussian conditional structure}
+Every linear SDE produces Gaussian conditionals $Z_t\mid Z_0 \sim \cN(\alpha_t Z_0,\,\sigma_t^2\Id)$.
+This is the same affine Gaussian structure that FM uses for conditional paths (Section~\ref{sec:path-first}).
+The forward diffusion SDE is thus one \emph{origin story} for the schedules $(\alpha_t,\sigma_t)$; FM can also choose them freely.
+\end{keybox}
+
+\subsection{Inverse identification: $(\alpha_t,\sigma_t) \to (f_t,g_t)$}
+
+\begin{proposition}\label{prop:inverse-id}
+If $\alpha_t > 0$ and $\sigma_t > 0$ are differentiable:
+\begin{equation}\label{eq:f-from-alpha}
+f_t = \frac{\dot\alpha_t}{\alpha_t}, \qquad g_t^2 = \dot\sigma_t^2 - 2f_t\sigma_t^2 = 2\alpha_t\sigma_t\,\frac{\dd}{\dd t}\!\Big(\frac{\sigma_t}{\alpha_t}\Big).
+\end{equation}
+\end{proposition}
+
+This bijection $(\alpha_t,\sigma_t)\leftrightarrow(f_t,g_t)$ allows seamless translation between FM schedules and SDE coefficients.
+
+\subsection{VP and VE as special cases}
+
+\begin{example}[Variance Preserving (VP)]
+Forward SDE: $\dd Y_t = -\frac{1}{2}\beta(t)Y_t\dd t + \sqrt{\beta(t)}\dd W_t$, $Y_0\sim p_{\mathrm{data}}$.
+Let $\Gamma(t) = \int_0^t\beta(u)\dd u$. Then $f_t = -\frac{1}{2}\beta(t)$, $g_t = \sqrt{\beta(t)}$, giving:
+\[
+\alpha_t = e^{-\Gamma(t)/2}, \qquad \sigma_t^2 = 1 - e^{-\Gamma(t)}.
+\]
+Note $\alpha_t^2 + \sigma_t^2 = 1$: this is the ``variance preserving'' property.
+\end{example}
+
+\begin{example}[Variance Exploding (VE)]
+Forward SDE: $\dd Y_t = g(t)\dd W_t$, $Y_0\sim p_{\mathrm{data}}$.
+Here $f_t = 0$, $\alpha_t \equiv 1$, $\sigma_t^2 = \int_0^t g(u)^2\dd u$.
+\end{example}
+
+% =====================================================================================
+\section{Score identities, four parameterizations, and the FM = Diffusion equivalence}\label{sec:four-param}
+
+We now work under the affine Gaussian path and derive, in a single unified pass, all score-based identities and prediction equivalences.
+This section combines the score/posterior analysis with the four-parameterization framework, avoiding any duplication.
+
+\subsection{The affine Gaussian path}\label{subsec:affine-setup}
+
+\begin{assumption}[Affine Gaussian path --- noise-to-data orientation]\label{ass:affine-gauss}
+Let $X_0\sim\cN(0,\Id)$ (noise) and $Z\sim p_{\mathrm{data}}$ (data) be independent.
+Let $\alpha_t, \sigma_t$ be $C^1$ schedules on $[0,1]$ with
+\[
+\alpha_0 = 0,\;\sigma_0 = 1, \qquad \alpha_1 = 1,\;\sigma_1 = 0, \qquad \sigma_t > 0\ \text{for }t\in[0,1).
+\]
+Define
+\begin{equation}\label{eq:affine-path}
+\bar{X}_t \coloneqq \sigma_t X_0 + \alpha_t Z,
+\end{equation}
+with density $p_t$ and score $s(x,t) = \grad_x\log p_t(x)$ for $t\in(0,1)$.
+\end{assumption}
+
+Conditionally on $Z = z$, $\bar{X}_t \sim \cN(\alpha_t z,\,\sigma_t^2\Id)$.
+This is the same Gaussian conditional structure as~\eqref{eq:linear-cond}, viewed in noise-to-data time.
+Both FM and diffusion operate on this shared structure.
+
+\subsection{Score marginalization for Gaussian mixtures}
+
+\begin{lemma}[Score marginalization]\label{lem:score-marg}
+Under Assumption~\ref{ass:affine-gauss}, for $t\in(0,1)$:
+\begin{equation}\label{eq:score-marg}
+\grad_x\log p_t(x) = \E\!\big[\grad_x\log p_t(x\mid Z)\,\big|\,\bar{X}_t = x\big].
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+From $p_t(x) = \int p_t(x\mid z)\,p_{\mathrm{data}}(z)\dd z$, differentiate under the integral:
+\[
+\grad p_t(x) = \int p_t(x\mid z)\,\grad\log p_t(x\mid z)\,p_{\mathrm{data}}(z)\dd z.
+\]
+Divide by $p_t(x)$ and recognize the posterior weighting $p(z\mid x) = p_t(x\mid z)\,p_{\mathrm{data}}(z)/p_t(x)$.
+\end{proof}
+
+This is the score-level analogue of the marginalization trick (Proposition~\ref{prop:marg-vf-generates}): the marginal score is a posterior expectation of conditional scores.
+
+\subsection{The four prediction types and their algebraic equivalence}
+
+Throughout, we write $x_t = \alpha_t x_0 + \sigma_t\varepsilon$ with $x_0\sim p_{\mathrm{data}}$, $\varepsilon\sim\cN(0,\Id)$, and $p_t(x_t\mid x_0) = \cN(x_t;\,\alpha_t x_0,\,\sigma_t^2\Id)$.
+
+\paragraph{The four predictions.}
+All four aim to approximate a conditional expectation given the noisy observation $x_t$:
+\begin{enumerate}[nosep,leftmargin=18pt]
+\item \textbf{$\varepsilon$-prediction} (noise): $\varepsilon^*(x_t,t) = \E[\varepsilon\mid x_t]$.
+\item \textbf{$x$-prediction} (clean): $x^*(x_t,t) = \E[x_0\mid x_t]$.
+\item \textbf{Score prediction}: $s^*(x_t,t) = \grad\log p_t(x_t)$.
+\item \textbf{$v$-prediction} (velocity): $v^*(x_t,t) = \E[\dot{x}_t\mid x_t]$, where $\dot{x}_t = \alpha_t' x_0 + \sigma_t'\varepsilon$.
+\end{enumerate}
+
+\begin{proposition}[Algebraic equivalence of the four predictions]\label{prop:four-equiv}
+The four optimal predictions are related by:
+\begin{align}
+\varepsilon^*(x_t,t) &= -\sigma_t\,s^*(x_t,t), \label{eq:eps-score}\\
+x^*(x_t,t) &= \frac{1}{\alpha_t}\big(x_t + \sigma_t^2\,s^*(x_t,t)\big), \label{eq:x-score}\\
+v^*(x_t,t) &= \alpha_t'\,x^*(x_t,t) + \sigma_t'\,\varepsilon^*(x_t,t). \label{eq:v-xeps}
+\end{align}
+\end{proposition}
+
+\begin{proof}
+\emph{Equation~\eqref{eq:eps-score}.}
+The conditional score is $\grad\log p_t(x_t\mid x_0) = -\frac{x_t - \alpha_t x_0}{\sigma_t^2} = -\frac{\varepsilon}{\sigma_t}$.
+By Lemma~\ref{lem:score-marg}:
+\[
+s^*(x_t,t) = \E\!\Big[-\frac{\varepsilon}{\sigma_t}\,\Big|\,x_t\Big] = -\frac{1}{\sigma_t}\varepsilon^*(x_t,t).
+\]
+
+\emph{Equation~\eqref{eq:x-score}.}
+From $x_t = \alpha_t x_0 + \sigma_t\varepsilon$:
+\[
+x^* = \E[x_0\mid x_t] = \frac{1}{\alpha_t}\big(x_t - \sigma_t\,\E[\varepsilon\mid x_t]\big) = \frac{1}{\alpha_t}\big(x_t + \sigma_t^2\,s^*\big),
+\]
+using~\eqref{eq:eps-score} to substitute $\varepsilon^* = -\sigma_t s^*$.
+
+\emph{Equation~\eqref{eq:v-xeps}.}
+The conditional velocity is $\dot{x}_t = \alpha_t' x_0 + \sigma_t'\varepsilon$.
+Taking the expectation given $x_t$ yields $v^* = \alpha_t' x^* + \sigma_t'\varepsilon^*$ by linearity.
+\end{proof}
+
+\begin{remark}[Connection to posterior means]
+Equations~\eqref{eq:eps-score}--\eqref{eq:x-score} are equivalent to: $\E[X_0\mid \bar{X}_t=x] = -\sigma_t\,s(x,t)$ and $\E[Z\mid\bar{X}_t=x] = \frac{1}{\alpha_t}(x+\sigma_t^2\,s(x,t))$ in the notation of Assumption~\ref{ass:affine-gauss} (where $X_0$ is noise and $Z$ is data).
+\end{remark}
+
+Their training objectives all share the template:
+\begin{equation}\label{eq:general-loss}
+\mathcal{L}(\theta) = \E_{x_0,\,\varepsilon,\,t}\!\Big[\omega(t)\,\big\|\mathrm{NN}_\theta(x_t,t) - (A_t x_0 + B_t\varepsilon)\big\|^2\Big].
+\end{equation}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{} l c c c @{}}
+\toprule
+\textbf{Prediction type} & $A_t$ & $B_t$ & \textbf{Regression target} \\
+\midrule
+Clean ($x$-pred.) & $1$ & $0$ & $x_0$ \\
+Noise ($\varepsilon$-pred.) & $0$ & $1$ & $\varepsilon$ \\
+Score & $0$ & $-1/\sigma_t$ & $-\varepsilon/\sigma_t$ \\
+Velocity ($v$-pred.) & $\alpha_t'$ & $\sigma_t'$ & $\alpha_t' x_0 + \sigma_t'\varepsilon$ \\
+\bottomrule
+\end{tabular}
+\caption{Regression target $= A_t x_0 + B_t\varepsilon$ for each parameterization.}
+\label{tab:four-param}
+\end{table}
+
+\subsection{The FM velocity is the PF-ODE drift: the complete equivalence}\label{subsec:fm-eq-diff}
+
+We now derive the central identity connecting FM and diffusion.
+
+\begin{theorem}[FM velocity = PF-ODE drift]\label{thm:fm-eq-pf}
+Under Assumption~\ref{ass:affine-gauss}, the FM optimal velocity $v^*(x,t) = \E[\dot{\bar{X}}_t\mid \bar{X}_t = x]$ satisfies
+\begin{equation}\label{eq:vel-score}
+v^*(x,t) = \frac{\dot\alpha_t}{\alpha_t}\,x + \sigma_t\!\Big(\frac{\dot\alpha_t}{\alpha_t}\sigma_t - \dot\sigma_t\Big)s(x,t).
+\end{equation}
+Using the schedule conversion $f_t = \dot\alpha_t/\alpha_t$ and $g_t^2 = 2\sigma_t\dot\sigma_t - 2f_t\sigma_t^2$ (Proposition~\ref{prop:inverse-id}), this is exactly:
+\begin{equation}\label{eq:v-eq-pf}
+\boxed{v^*(x,t) = f_t\,x - \tfrac{1}{2}g_t^2\,\grad\log p_t(x),}
+\end{equation}
+which is the probability-flow ODE drift from Theorem~\ref{thm:pf-ode}.
+\end{theorem}
+
+\begin{proof}
+From~\eqref{eq:affine-path}, $\dot{\bar{X}}_t = \dot\sigma_t X_0 + \dot\alpha_t Z$.
+Conditioning on $\bar{X}_t = x$ and using the posterior mean identities from Proposition~\ref{prop:four-equiv}:
+\begin{align*}
+v^*(x,t) &= \dot\sigma_t\,\E[X_0\mid x] + \dot\alpha_t\,\E[Z\mid x] \\
+&= \dot\sigma_t\,(-\sigma_t\,s) + \dot\alpha_t\cdot\frac{1}{\alpha_t}(x + \sigma_t^2\,s) \\
+&= \frac{\dot\alpha_t}{\alpha_t}\,x + \Big(\frac{\dot\alpha_t}{\alpha_t}\sigma_t^2 - \dot\sigma_t\sigma_t\Big)s,
+\end{align*}
+which is~\eqref{eq:vel-score}.
+Now substitute $f_t = \dot\alpha_t/\alpha_t$:
+\[
+v^*(x,t) = f_t\,x + \big(f_t\sigma_t^2 - \dot\sigma_t\sigma_t\big)\,s = f_t\,x - \frac{1}{2}\big(2\dot\sigma_t\sigma_t - 2f_t\sigma_t^2\big)\,s = f_t\,x - \frac{g_t^2}{2}\,s.
+\]
+\end{proof}
+
+\begin{resultbox}{Gaussian FM = Diffusion: what this theorem means}
+Under affine Gaussian conditional paths:
+\begin{enumerate}[nosep]
+\item The FM optimal velocity field \emph{is} the probability-flow ODE drift --- the same ODE used for deterministic sampling in diffusion models.
+\item Training FM with $v$-prediction (CFM loss with target $\alpha_t' x_0 + \sigma_t'\varepsilon$) is gradient-equivalent to training diffusion with score/noise prediction, up to a time-dependent reweighting (since the four predictions are algebraically interchangeable by Proposition~\ref{prop:four-equiv}).
+\item FM and diffusion are not two competing frameworks: they are the \emph{same mathematical object} viewed through different lenses (conditional velocity fields vs.\ score functions).
+\end{enumerate}
+\end{resultbox}
+
+\subsection{PF-ODE in all four parameterizations}
+
+Using the inter-conversion formulas from Proposition~\ref{prop:four-equiv}, the PF-ODE $\dot{x} = v^*(x,t)$ admits equivalent forms depending on which network output is available.
+
+\begin{proposition}[PF-ODE forms]\label{prop:pf-ode-param}
+\begin{align}
+\frac{\dd x}{\dd t} &= \frac{\alpha_t'}{\alpha_t}x - \sigma_t\Big(\frac{\alpha_t'}{\alpha_t} - \frac{\sigma_t'}{\sigma_t}\Big)\varepsilon^*(x,t) & &(\varepsilon\text{-prediction}) \label{eq:pf-eps}\\
+&= \frac{\sigma_t'}{\sigma_t}x + \alpha_t\Big(\frac{\alpha_t'}{\alpha_t} - \frac{\sigma_t'}{\sigma_t}\Big)x^*(x,t) & &(x\text{-prediction}) \label{eq:pf-x}\\
+&= \frac{\alpha_t'}{\alpha_t}x + \sigma_t^2\Big(\frac{\alpha_t'}{\alpha_t} - \frac{\sigma_t'}{\sigma_t}\Big)s^*(x,t) & &(\text{score prediction}) \label{eq:pf-s}\\
+&= v^*(x,t) & &(v\text{-prediction}). \label{eq:pf-v}
+\end{align}
+\end{proposition}
+
+\begin{keybox}{The simplest parameterization}
+In $v$-prediction, the PF-ODE is simply $\dot{x} = v^*(x,t)$: the velocity field \emph{is} the ODE drift.
+This is why flow matching naturally trains a $v$-predictor, while diffusion traditionally trains an $\varepsilon$- or score-predictor and reconstructs the ODE drift via~\eqref{eq:pf-eps} or~\eqref{eq:pf-s}.
+\end{keybox}
+
+\begin{example}[VP simplification]
+Under VP schedules $\alpha_t = \sqrt{\bar\alpha_t}$, $\sigma_t = \sqrt{1-\bar\alpha_t}$, define $\kappa_t = \dot\alpha_t/\alpha_t = \dot{\bar\alpha}_t/(2\bar\alpha_t)$.
+Then the coefficient of $s$ in~\eqref{eq:vel-score} equals $\kappa_t$ as well:
+$\sigma_t(\kappa_t\sigma_t - \dot\sigma_t) = \kappa_t$.
+The FM velocity simplifies to $v^*(x,t) = \kappa_t\,(x + s(x,t))$.
+\end{example}
+
+% =====================================================================================
+\section{All affine flows are equivalent}\label{sec:all-affine-equiv}
+
+\begin{proposition}[Equivalence of affine flows]\label{prop:affine-equiv}
+Let $x_t^{\mathrm{FM}} = (1-t)x_0 + t\varepsilon$ be the canonical FM interpolation and $x_t = \alpha_t x_0 + \sigma_t\varepsilon$ any affine interpolation.
+Define $c(t) \coloneqq \alpha_t + \sigma_t$ and $\tau(t) \coloneqq \sigma_t/(\alpha_t + \sigma_t)$ (assuming $c(t)\neq 0$).
+Then:
+\begin{equation}\label{eq:affine-equiv}
+x_t = c(t)\,x_{\tau(t)}^{\mathrm{FM}},
+\end{equation}
+and the velocity transforms as:
+\begin{equation}\label{eq:affine-vel-equiv}
+v(x_t,t) = c'(t)\,x_{\tau(t)}^{\mathrm{FM}} + c(t)\,\tau'(t)\,v^{\mathrm{FM}}\!\big(x_{\tau(t)}^{\mathrm{FM}},\tau(t)\big).
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Direct algebraic rewrite:
+$x_t = (\alpha_t + \sigma_t)\big(\frac{\alpha_t}{\alpha_t+\sigma_t}x_0 + \frac{\sigma_t}{\alpha_t+\sigma_t}\varepsilon\big) = c(t)\big((1-\tau(t))x_0 + \tau(t)\varepsilon\big) = c(t)\,x_{\tau(t)}^{\mathrm{FM}}$.
+
+For the velocity, apply the chain rule to $x_t = c(t)\,x_{\tau(t)}^{\mathrm{FM}}$ and use $v^{\mathrm{FM}}(x,\tau) = \varepsilon - x_0$ (constant along the canonical path).
+\end{proof}
+
+\begin{resultbox}{Practical consequence}
+The ``simplicity'' of the linear FM schedule $(\alpha_t = 1-t,\,\sigma_t = t)$ is not fundamental: any affine interpolation is equivalent up to time reparameterization and spatial rescaling.
+Different schedules affect training dynamics, weighting, and numerical properties, but not the class of representable flows.
+\end{resultbox}
+
+\newpage
+% =====================================================================================
+%  PART V: SYNTHESIS
+% =====================================================================================
+
+\part{Synthesis}
+
+% =====================================================================================
+\section{The Fokker--Planck equation as the unifying principle}\label{sec:synthesis}
+
+We conclude by summarizing the logical architecture of the course in a single diagram.
+
+\begin{summarybox}{Unified perspective}
+All generative models in this course share one underlying rule: \textbf{the Fokker--Planck / continuity equation} governing the evolution of $p_t(x)$ under a chosen forward process.
+
+\medskip
+\textbf{Forward process} (from data to noise):
+\begin{itemize}[nosep]
+\item Variational: defining $p_t(x_t\mid x_0) = \cN(\alpha_t x_0, \sigma_t^2\Id)$.
+\item SDE: $\dd x = f(t)x\dd t + g(t)\dd w$, with $(f,g) \leftrightarrow (\alpha_t,\sigma_t)$ via Proposition~\ref{prop:inverse-id}.
+\end{itemize}
+
+\medskip
+\textbf{Reverse process} (from noise to data), all sharing the same $p_t$:
+\begin{itemize}[nosep]
+\item PF-ODE: $\dd x = v^*(x,t)\dd t$ where $v^* = f(t)x - \frac{1}{2}g^2(t)\grad\log p_t(x)$ \hfill ($\gamma\equiv 0$)
+\item Reverse SDE: drift corrected by $-g^2 s$ plus diffusion $g\dd\bar{W}$ \hfill ($\gamma = g$)
+\item General SDE: $\dd x = [v^* + \frac{\gamma^2}{2}s]\dd t + \gamma\dd B$ for any $\gamma(t)\ge 0$ \hfill (Thm.~\ref{thm:marginal-family})
+\end{itemize}
+
+\medskip
+\textbf{Learning}:
+\begin{itemize}[nosep]
+\item Score matching $\leftrightarrow$ Denoising score matching $\leftrightarrow$ Conditional flow matching.
+\item All are conditional expectations: $s^* = \E[\grad\log p_t(x_t\mid x_0)\mid x_t]$, $v^* = \E[\dot{x}_t\mid x_t]$.
+\item Training with conditional targets differs from marginal targets by a $\theta$-free constant.
+\end{itemize}
+
+\medskip
+\textbf{Equivalences} (Theorem~\ref{thm:fm-eq-pf} and Propositions~\ref{prop:four-equiv},~\ref{prop:affine-equiv}):
+\begin{itemize}[nosep]
+\item Four parameterizations ($\varepsilon$, $x$, score, velocity) are algebraically interchangeable.
+\item All affine flows are equivalent up to time reparameterization and rescaling.
+\item Gaussian FM $=$ Diffusion: the FM optimal velocity \emph{is} the PF-ODE drift $f_t x - \frac{1}{2}g_t^2\grad\log p_t$.
+\end{itemize}
+\end{summarybox}
+
+\newpage
+% =====================================================================================
+%  APPENDICES
+% =====================================================================================
+
+\appendix
+
+\section{Derivation of weak forms from stochastic calculus}\label{app:weak-forms}
+
+\subsection{ODE case}
+If $\dot{X}_t = v_t(X_t)$ and $\varphi\in C_c^\infty$, the chain rule gives $\frac{\dd}{\dd t}\varphi(X_t) = \inner{\grad\varphi(X_t)}{v_t(X_t)}$.
+Taking expectations yields the weak continuity equation~\eqref{eq:cont-weak}.
+
+\subsection{SDE case}
+If $\dd X_t = b(X_t,t)\dd t + \sigma(t)\dd B_t$, It\^o's formula gives
+\[
+\dd\varphi(X_t) = \inner{\grad\varphi(X_t)}{b(X_t,t)}\dd t + \sigma(t)\inner{\grad\varphi(X_t)}{\dd B_t} + \frac{\sigma(t)^2}{2}\Delta\varphi(X_t)\dd t.
+\]
+Taking expectations (the It\^o integral contributes zero) yields the weak Fokker--Planck equation~\eqref{eq:fp-weak}.
+
+\end{document}

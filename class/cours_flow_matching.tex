@@ -1,0 +1,1121 @@
+% ============================================================
+%  Complete Course: On the Closed-Form of Flow Matching
+%  Based on Beaudouin & Collin, MVA 2025-2026
+%  Master / PhD level -- from first principles
+% ============================================================
+\documentclass[11pt, a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.8cm, right=2.8cm]{geometry}
+\usepackage{setspace}
+\setstretch{1.15}
+\usepackage{parskip}
+\setlength{\parskip}{6pt}
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{bm}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{breakable, skins}
+\definecolor{mainblue}{RGB}{30, 80, 160}
+\definecolor{lightblue}{RGB}{220, 235, 255}
+\definecolor{maingreen}{RGB}{20, 120, 60}
+\definecolor{lightgreen}{RGB}{215, 245, 225}
+\definecolor{mainyellow}{RGB}{180, 130, 0}
+\definecolor{lightyellow}{RGB}{255, 248, 210}
+\definecolor{mainred}{RGB}{160, 30, 30}
+\definecolor{lightred}{RGB}{255, 225, 225}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{darkgray}{RGB}{60, 60, 60}
+\newtcolorbox{thmbox}[1][]{breakable,enhanced,colback=lightblue,colframe=mainblue,boxrule=1pt,arc=4pt,left=8pt,right=8pt,top=6pt,bottom=6pt,title={#1},fonttitle=\bfseries\color{mainblue},coltitle=mainblue,attach boxed title to top left={yshift=-2mm,xshift=4mm},boxed title style={colback=white,colframe=mainblue,arc=3pt,boxrule=0.8pt}}
+\newtcolorbox{defbox}[1][]{breakable,enhanced,colback=lightgreen,colframe=maingreen,boxrule=1pt,arc=4pt,left=8pt,right=8pt,top=6pt,bottom=6pt,title={#1},fonttitle=\bfseries\color{maingreen},coltitle=maingreen,attach boxed title to top left={yshift=-2mm,xshift=4mm},boxed title style={colback=white,colframe=maingreen,arc=3pt,boxrule=0.8pt}}
+\newtcolorbox{intubox}[1][Intuition]{breakable,enhanced,colback=lightyellow,colframe=mainyellow,boxrule=1pt,arc=4pt,left=8pt,right=8pt,top=6pt,bottom=6pt,title={#1},fonttitle=\bfseries\color{mainyellow},coltitle=mainyellow,attach boxed title to top left={yshift=-2mm,xshift=4mm},boxed title style={colback=white,colframe=mainyellow,arc=3pt,boxrule=0.8pt}}
+\newtcolorbox{keybox}[1][Key Point]{breakable,enhanced,colback=lightred,colframe=mainred,boxrule=1pt,arc=4pt,left=8pt,right=8pt,top=6pt,bottom=6pt,title={#1},fonttitle=\bfseries\color{mainred},coltitle=mainred,attach boxed title to top left={yshift=-2mm,xshift=4mm},boxed title style={colback=white,colframe=mainred,arc=3pt,boxrule=0.8pt}}
+\newtcolorbox{algobox}[1][Algorithm]{breakable,enhanced,colback=lightgray,colframe=darkgray,boxrule=0.8pt,arc=4pt,left=8pt,right=8pt,top=6pt,bottom=6pt,title={#1},fonttitle=\bfseries\color{darkgray}}
+\usepackage{titlesec}
+\titleformat{\section}[block]{\Large\bfseries\color{mainblue}}{\thesection}{1em}{}[\vspace{2pt}\titlerule]
+\titleformat{\subsection}[block]{\large\bfseries\color{mainblue!80!black}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}[block]{\normalsize\bfseries\color{darkgray}}{\thesubsubsection}{1em}{}
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=1.5em,itemsep=3pt}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=3pt}
+\usepackage{booktabs,array,tabularx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=mainblue,citecolor=maingreen,urlcolor=mainblue}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{darkgray}\textit{Flow Matching --- Complete Course}}
+\fancyhead[R]{\small\color{darkgray}\textit{MVA 2025--2026}}
+\fancyfoot[C]{\small\color{darkgray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\newcommand{\Rd}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Id}{\mathrm{Id}}
+\newcommand{\pdata}{p_{\mathrm{data}}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\ddt}{\frac{\dd}{\dd t}}
+\newcommand{\grad}{\nabla}
+\newcommand{\divg}{\nabla \cdot}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\softmax}{\operatorname{softmax}}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ============================================================
+\begin{document}
+% ============================================================
+
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+{\color{mainblue}\rule{\linewidth}{2pt}}
+\vspace{0.5cm}
+
+{\Huge\bfseries\color{mainblue} Complete Course}\\[0.4cm]
+{\Large\bfseries On the Closed-Form of Flow Matching}\\[0.3cm]
+{\large\color{darkgray} Generalization Does Not Arise from Target Stochasticity}
+
+\vspace{0.5cm}
+{\color{mainblue}\rule{\linewidth}{2pt}}
+\vspace{1.5cm}
+
+{\large Based on the project report by}\\[0.3cm]
+{\large\bfseries Gaspard Beaudouin \& Yentl Collin}\\[0.2cm]
+{\normalsize Master MVA, \'{E}cole Normale Sup\'{e}rieure Paris-Saclay}\\
+{\normalsize Generative Modeling (2025--2026)}
+
+\vspace{1.5cm}
+\begin{tcolorbox}[colback=lightblue,colframe=mainblue,arc=6pt,left=12pt,right=12pt,top=10pt,bottom=10pt]
+\textbf{Course objectives.} This course is a complete, self-contained exposition of the theory and experiments behind flow matching and its relationship to diffusion models. We start from probability fundamentals (stochastic differential equations, continuity equation, score functions), build up to the theoretical equivalence between flow matching and diffusion models, and then investigate the central empirical question: \emph{why do these models generalize rather than memorize training data?} The course is aimed at master/PhD students with a background in probability, linear algebra, and machine learning.
+\end{tcolorbox}
+
+\vfill
+{\small\color{darkgray} March 2026 --- Course notes derived from the MVA project report}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\part{Mathematical Foundations}
+% ============================================================
+
+\section{The Generative Modeling Problem}
+
+\subsection{Setting and Notation}
+
+Let $\pdata$ be a probability distribution over $\Rd^d$, representing the true data distribution (images, audio, molecules, etc.). We observe a finite dataset $\mathcal{D} = \{x^{(1)}, \ldots, x^{(n)}\}$ of i.i.d.\ samples from $\pdata$.
+
+The goal of \textbf{generative modeling} is to construct a procedure that produces new samples statistically indistinguishable from samples of $\pdata$, using only $\mathcal{D}$.
+
+\begin{defbox}[Definition: Generative Model]
+A \textbf{generative model} is a learnable map $G_\theta : \mathcal{Z} \to \Rd^d$ where $\mathcal{Z}$ is a simple latent space (typically $z \sim \mathcal{N}(0,\Id)$), such that $G_\theta(z) \approx \pdata$ in distribution. The parameter $\theta$ is learned from $\mathcal{D}$.
+\end{defbox}
+
+\subsection{The Memorization vs.\ Generalization Dilemma}
+
+A model that perfectly memorizes $\mathcal{D}$ can generate realistic-looking samples (only training points), but fails to produce truly new examples. Conversely, a model that genuinely learns $\pdata$ can interpolate between training examples and produce novel samples.
+
+\begin{keybox}[The Central Puzzle of This Course]
+Diffusion models and flow matching, when trained on finite data, have a closed-form \emph{optimal} solution that can only \textbf{memorize} training data. Yet in practice, trained neural networks \textbf{generalize}. Understanding this gap---precisely when, where, and why generalization occurs---is the central question of this course.
+\end{keybox}
+
+\subsection{Two Dominant Modern Frameworks}
+
+Both \textbf{diffusion models} and \textbf{flow matching} define a probability path $(p_t)_{t \in [0,1]}$ from a simple source $p_0 = \mathcal{N}(0, \Id)$ to $p_1 = \pdata$, and learn dynamics (an ODE or SDE) whose time marginals follow this path. The two frameworks are mathematically equivalent, as we will show in Section~\ref{sec:equivalence}.
+
+% ============================================================
+\section{Diffusion Models: From First Principles}
+\label{sec:diffusion}
+% ============================================================
+
+\subsection{Brownian Motion: A Brief Primer}
+
+\begin{defbox}[Definition: Standard Brownian Motion]
+A \textbf{standard Brownian motion} $(W_t)_{t \geq 0}$ on $\Rd^d$ satisfies:
+\begin{enumerate}
+  \item $W_0 = 0$ almost surely.
+  \item Independent increments: $W_t - W_s \perp \mathcal{F}_s$ for $0 \leq s < t$.
+  \item Gaussian increments: $W_t - W_s \sim \mathcal{N}(0, (t-s)\Id)$.
+  \item Continuous paths almost surely.
+\end{enumerate}
+\end{defbox}
+
+\begin{intubox}
+Brownian motion is the continuous-time limit of a random walk. At each infinitesimal step $\dd t$, the position changes by $\dd W_t \sim \mathcal{N}(0, \dd t \cdot \Id)$. Variance grows linearly: $\mathrm{Var}(W_t) = t \cdot \Id$.
+\end{intubox}
+
+An \textbf{It\^{o} SDE} $\dd X_t = a(X_t, t)\,\dd t + b(X_t, t)\,\dd W_t$ is shorthand for the integral equation:
+\[
+  X_t = X_0 + \int_0^t a(X_s, s)\,\dd s + \int_0^t b(X_s, s)\,\dd W_s
+\]
+where the second integral is an It\^{o} stochastic integral.
+
+\subsection{The Forward Diffusion Process}
+
+A diffusion model defines a \textbf{forward process} that gradually adds noise to data:
+
+\begin{thmbox}[Forward SDE]
+\begin{equation}
+  \dd X_t = f(X_t, t)\,\dd t + g(t)\,\dd W_t, \qquad X_0 \sim \pdata
+  \label{eq:forward_sde}
+\end{equation}
+where $f : \Rd^d \times [0,T] \to \Rd^d$ is the \textbf{drift}, $g : [0,T] \to \Rd$ is the scalar \textbf{diffusion coefficient}, and $W_t$ is standard Brownian motion in $\Rd^d$.
+\end{thmbox}
+
+\begin{intubox}
+At each infinitesimal step $\dd t$:
+\[
+  X_{t+\dd t} \approx X_t + \underbrace{f(X_t, t)\,\dd t}_{\text{det.\ push}} + \underbrace{g(t)\,\dd W_t}_{\mathcal{N}(0,\, g(t)^2 \dd t\,\Id)}
+\]
+Starting from $X_0 \sim \pdata$, after time $T$, the distribution of $X_T$ approaches $\mathcal{N}(0, \Id)$ for appropriate $f$ and $g$.
+\end{intubox}
+
+\subsection{The Linear Case: Marginal Distributions}
+
+For the practically important \textbf{linear SDE} with $f(x,t) = f_t x$ (scalar drift):
+
+\begin{proposition}[Conditional law of the linear SDE]
+\label{prop:linear_sde}
+Under $f(x,t) = f_t x$, the conditional law is:
+\[
+  X_t \mid X_0 = x_0 \;\sim\; \mathcal{N}\!\left(\alpha_t x_0,\; \sigma_t^2 \Id\right)
+\]
+where $\alpha_t = \exp\!\bigl(\int_0^t f_s\,\dd s\bigr)$ and $\sigma_t^2 = \alpha_t^2 \int_0^t g_s^2\,\alpha_s^{-2}\,\dd s$.
+
+Equivalently: $X_t = \alpha_t x_0 + \sigma_t \varepsilon$ with $\varepsilon \sim \mathcal{N}(0, \Id)$.
+\end{proposition}
+
+\begin{intubox}
+$X_t$ is a \textbf{noisy interpolant} between data and noise:
+\begin{itemize}
+  \item $\alpha_t$ decreases from 1 to 0: the \textbf{signal preservation factor}.
+  \item $\sigma_t$ increases from 0 to 1: the \textbf{accumulated noise standard deviation}.
+  \item At $t=0$: pure data $x_0$. At $t=T$: pure noise $\mathcal{N}(0,\Id)$.
+\end{itemize}
+\end{intubox}
+
+\subsection{The Fokker--Planck Equation}
+
+The marginal density $p_t$ of $X_t$ evolves according to:
+
+\begin{thmbox}[Fokker--Planck Equation]
+\begin{equation}
+  \partial_t p_t = -\divg(p_t\, f(\cdot, t)) + \frac{g(t)^2}{2}\,\Delta p_t
+  \label{eq:fokker_planck}
+\end{equation}
+\end{thmbox}
+
+\begin{intubox}
+Two competing effects:
+\begin{itemize}
+  \item $-\divg(p_t f)$: \textbf{advection}---probability mass flows along the drift $f$ (like a fluid in a vector field).
+  \item $\frac{g^2}{2}\Delta p_t$: \textbf{diffusion}---mass spreads isotropically due to noise (like heat in a medium).
+\end{itemize}
+The Fokker--Planck equation is the ``dual'' of the SDE: it describes how the distribution evolves, rather than individual trajectories.
+\end{intubox}
+
+\subsection{The Reverse-Time SDE: Generation}
+
+To generate new data, start from $X_T \sim \mathcal{N}(0,\Id)$ and run the \textbf{reverse-time SDE} (Anderson 1982):
+
+\begin{thmbox}[Reverse-Time SDE]
+\begin{equation}
+\begin{aligned}
+  \dd X_\tau &= \Bigl[-f(X_\tau, T{-}\tau) + g(T{-}\tau)^2\,\grad \log p_{T-\tau}(X_\tau)\Bigr]\dd\tau \\
+             &\quad + g(T{-}\tau)\,\dd W_\tau
+\end{aligned}
+  \label{eq:reverse_sde}
+\end{equation}
+where $\tau = T - t$ runs forward from 0 to $T$.
+\end{thmbox}
+
+The new term $\grad_x \log p_t(x)$ is the \textbf{score function}: it points toward high-density regions of $p_t$ and enables the process to ``un-noise'' samples.
+
+\subsection{Score Estimation: Denoising Score Matching}
+
+The score $\grad_x \log p_t(x)$ is intractable for general $\pdata$. The key identity is:
+
+\begin{thmbox}[Tweedie's Identity]
+\begin{equation}
+  \grad_x \log p_t(x) = \E\!\Bigl[\grad_x \log p_t(x \mid X_0) \,\Big|\, X_t = x\Bigr]
+  \label{eq:tweedie}
+\end{equation}
+\end{thmbox}
+
+Under Proposition~\ref{prop:linear_sde}, since $p_t(x \mid x_0) = \mathcal{N}(\alpha_t x_0, \sigma_t^2 \Id)$, we have $\grad_x \log p_t(x \mid x_0) = -\varepsilon/\sigma_t$. This yields the \textbf{Denoising Score Matching (DSM)} loss:
+
+\begin{equation}
+  \mathcal{L}_{\mathrm{DSM}}(\theta) = \E_{t,\, x_0,\, \varepsilon}\!\left[
+  \left\|s_\theta(\alpha_t x_0 + \sigma_t \varepsilon,\, t) + \frac{\varepsilon}{\sigma_t}\right\|^2
+  \right]
+  \label{eq:dsm}
+\end{equation}
+
+This reduces score estimation to a \textbf{regression problem}: predict the normalized noise $-\varepsilon/\sigma_t$ added to the data.
+
+\begin{algobox}[Training and Inference for Diffusion Models]
+\textbf{Training:}
+\begin{enumerate}
+  \item Sample $x_0 \sim \pdata$, $t \sim \mathcal{U}[0,T]$, $\varepsilon \sim \mathcal{N}(0,\Id)$.
+  \item Form noisy sample: $x_t = \alpha_t x_0 + \sigma_t \varepsilon$.
+  \item Compute loss: $\|s_\theta(x_t, t) + \varepsilon/\sigma_t\|^2$. Update $\theta$.
+\end{enumerate}
+\textbf{Inference:}
+\begin{enumerate}
+  \item Sample $X_T \sim \mathcal{N}(0,\Id)$.
+  \item Simulate reverse-time SDE~\eqref{eq:reverse_sde} using learned $s_\theta$ (e.g.\ Euler-Maruyama).
+\end{enumerate}
+\end{algobox}
+
+\subsection{The Probability-Flow ODE: Bridge to Flow Matching}
+
+\begin{thmbox}[Probability-Flow ODE (Song et al.\ 2021)]
+There exists a \textbf{deterministic ODE} with the same marginals $p_t$ as the SDE:
+\begin{equation}
+  \ddt \tilde{X}_t = f(\tilde{X}_t, t) - \frac{g(t)^2}{2}\,\grad \log p_t(\tilde{X}_t)
+  \label{eq:pf_ode}
+\end{equation}
+If $\tilde{X}_0 \sim \pdata$, then $\tilde{X}_t \sim p_t$ for all $t$.
+\end{thmbox}
+
+\begin{intubox}
+The probability-flow ODE is \textbf{deterministic} (no noise!) yet reproduces the same sequence of distributions as the stochastic SDE. It can be run forward (data $\to$ noise) or backward (noise $\to$ data). This is the conceptual bridge to flow matching.
+\end{intubox}
+
+% ============================================================
+\section{Flow Matching: From First Principles}
+\label{sec:flow_matching}
+% ============================================================
+
+\subsection{The Core Idea: Learning a Transport Map}
+
+\textbf{Flow matching} (Lipman et al.\ 2023) directly learns a \textbf{velocity field} $u : \Rd^d \times [0,1] \to \Rd^d$ such that integrating the ODE:
+
+\begin{equation}
+  \dot{x}(t) = u(x(t), t), \qquad x(0) \sim \mathcal{N}(0, \Id)
+  \label{eq:ode}
+\end{equation}
+
+transports $\mathcal{N}(0,\Id)$ to $\pdata$ at $t=1$.
+
+\begin{defbox}[Continuity Equation]
+A velocity field $u$ correctly transports probability if and only if:
+\[
+  \partial_t p_t + \divg(p_t\, u) = 0
+\]
+This expresses conservation of probability mass: mass is neither created nor destroyed as it flows under $u$.
+\end{defbox}
+
+\begin{intubox}
+Think of $p_t$ as a fluid density and $u(x,t)$ as its velocity field. The continuity equation says: what flows in equals what flows out. Starting from $p_0 = \mathcal{N}(0,\Id)$ and flowing under $u$, the density arrives at $p_1 = \pdata$ at $t=1$.
+\end{intubox}
+
+\subsection{The Problem: Why Direct Learning Is Hard}
+
+Learning $u$ directly from the continuity equation requires knowing $p_t$ globally at every time $t$---but $p_t$ is the unknown! We need a tractable training objective.
+
+\subsection{Conditional Paths: The Key Trick}
+
+The solution: \textbf{condition on individual data points}. Given $x_1 \sim \pdata$, define the \textbf{conditional path}:
+
+\begin{thmbox}[Canonical Conditional Path]
+\begin{equation}
+  p_t(\cdot \mid x_1) = \mathcal{N}(t\,x_1,\; (1-t)^2 \Id)
+  \label{eq:cond_path}
+\end{equation}
+\end{thmbox}
+
+\begin{intubox}
+Unpacking eq.~\eqref{eq:cond_path}:
+\begin{itemize}
+  \item $t=0$: $\mathcal{N}(0, \Id)$---pure noise.
+  \item $t=1$: $\delta_{x_1}$---the data point exactly.
+  \item Intermediate $t$: Gaussian centered on $t\,x_1$ with variance $(1-t)^2$---a straight line in distribution space converging to $x_1$.
+\end{itemize}
+A sample from $p_t(\cdot \mid x_1)$ is $x_t = (1-t)x_0 + t\,x_1$ where $x_0 \sim \mathcal{N}(0,\Id)$---the \textbf{linear interpolant}.
+\end{intubox}
+
+The \textbf{conditional velocity field} generating this path is:
+\begin{equation}
+  u^{\mathrm{cond}}(x, x_1, t) = \frac{x_1 - x}{1-t}
+  \label{eq:cond_vel}
+\end{equation}
+
+\begin{intubox}
+\textbf{Verification:} If $x_t = (1-t)x_0 + t\,x_1$, then:
+\[
+\begin{aligned}
+  \dot{x}_t &= x_1 - x_0 = \frac{x_1 - [(1-t)x_0 + t\,x_1]}{1-t} \\
+            &= \frac{x_1 - x_t}{1-t} = u^{\mathrm{cond}}(x_t, x_1, t) \quad \checkmark
+\end{aligned}
+\]
+The conditional velocity is the direction from current position $x$ toward the target $x_1$, normalized to arrive exactly at $x_1$ in the remaining time $(1-t)$.
+\end{intubox}
+
+\subsection{The Marginal Velocity Field}
+
+The true target for flow matching is the \textbf{marginal velocity}:
+\begin{equation}
+  u^\star(x, t) = \E_{z \sim \pdata}\!\left[u^{\mathrm{cond}}(x, z, t) \;\big|\; x_t = x\right]
+  \label{eq:marginal_vel}
+\end{equation}
+
+This is intractable: it requires integrating over all possible sources $z$ of $x_t = x$.
+
+\subsection{The Conditional Flow Matching Loss}
+
+\begin{thmbox}[CFM Loss (Lipman et al.\ 2023)]
+The \textbf{Conditional Flow Matching loss}:
+\begin{equation}
+  \mathcal{L}_{\mathrm{CFM}}(\theta) = \E_{\substack{x_0 \sim \mathcal{N}(0,\Id),\; x_1 \sim \pdata \\ t \sim \mathcal{U}([0,1])}}\!\left[
+  \norm{u_\theta(x_t, t) - (x_1 - x_0)}^2
+  \right]
+  \label{eq:cfm_loss}
+\end{equation}
+where $x_t = (1-t)x_0 + t\,x_1$, has the \textbf{same gradient} and same \textbf{minimizer} as the intractable FM loss targeting $u^\star$.
+\end{thmbox}
+
+\begin{proof}[Proof: Variance Decomposition]
+For any random variable $A$ and predictor $f(X)$, the bias-variance decomposition gives:
+\[
+\begin{aligned}
+  \E\!\left[\norm{f(X) - A}^2\right] &= \E\!\left[\norm{f(X) - \E[A \mid X]}^2\right] \\
+  &\quad + \underbrace{\E\!\left[\norm{A - \E[A \mid X]}^2\right]}_{\text{constant w.r.t.\ } \theta}
+\end{aligned}
+\]
+Apply with $f = u_\theta$, $A = u^{\mathrm{cond}}(\cdot, x_1, t)$, $X = x_t$. The conditional expectation $\E[u^{\mathrm{cond}} \mid x_t] = u^\star(x_t, t)$. Therefore $\grad_\theta \mathcal{L}_{\mathrm{CFM}} = \grad_\theta \mathcal{L}_{\mathrm{FM}}$.
+\end{proof}
+
+\begin{intubox}
+\textbf{In practice:} Train $u_\theta$ to predict $x_1 - x_0$ for random pairs $(x_0, x_1, t)$. No need to compute $u^\star$ (which requires integrating over $\pdata$). The noisy per-sample target $u^{\mathrm{cond}} = x_1 - x_0$ suffices---the minimizer of the loss over all $u_\theta$ is still $u^\star$.
+\end{intubox}
+
+\begin{algobox}[Flow Matching Training and Inference]
+\textbf{Training:}
+\begin{enumerate}
+  \item Sample $x_1 \sim \pdata$, $x_0 \sim \mathcal{N}(0,\Id)$, $t \sim \mathcal{U}[0,1]$.
+  \item Compute interpolant: $x_t = (1-t)x_0 + t\,x_1$.
+  \item Loss: $\ell = \norm{u_\theta(x_t, t) - (x_1 - x_0)}^2$. Update $\theta$.
+\end{enumerate}
+\textbf{Inference:}
+\begin{enumerate}
+  \item Sample $x_0 \sim \mathcal{N}(0,\Id)$.
+  \item Solve ODE $\dot{x} = u_\theta(x,t)$ from $t=0$ to $t=1$ (Euler or RK4).
+  \item The result $x_1$ is a generated sample.
+\end{enumerate}
+\end{algobox}
+
+% ============================================================
+\section{Equivalence Between Flow Matching and Diffusion Models}
+\label{sec:equivalence}
+% ============================================================
+
+\subsection{The Four Parameterizations}
+
+Under affine Gaussian paths $x_t = \sigma_t \varepsilon + \alpha_t x_0$ ($\varepsilon \sim \mathcal{N}(0,\Id)$, $x_0 \sim \pdata$), four parameterizations are \textbf{algebraically equivalent}:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Parameterization} & \textbf{Network target} & \textbf{Model} \\
+\midrule
+$\varepsilon$-prediction & Predict noise $\varepsilon$ & DDPM (Ho et al.\ 2020) \\
+$x$-prediction & Predict data $x_0$ & --- \\
+Score & Predict $\grad \log p_t(x_t)$ & Score matching \\
+Velocity & Predict $\dot{x}_t$ & Flow matching \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The links: $\dot{x}_t = \sigma_t' \varepsilon + \alpha_t' x_0$, $\grad \log p_t = -\varepsilon/\sigma_t$, $x_0 = (x_t - \sigma_t \varepsilon)/\alpha_t$.
+
+The optimal velocity satisfies:
+\begin{equation}
+  v^\star(x, t) = \alpha_t'\,\E[x_0 \mid x_t = x] + \sigma_t'\,\E[\varepsilon \mid x_t = x]
+  \label{eq:optimal_vel_decomp}
+\end{equation}
+
+\subsection{The Main Theorem}
+
+\begin{thmbox}[Theorem: FM Velocity $=$ PF-ODE Drift]
+\label{thm:equivalence}
+Under affine Gaussian paths with schedules $(\alpha_t, \sigma_t)$, the FM optimal velocity $v^\star(x, t) = \E[\dot{x}_t \mid x_t = x]$ equals the probability-flow ODE drift:
+\begin{equation}
+  \boxed{v^\star(x, t) = f_t\,x - \frac{g_t^2}{2}\,\grad \log p_t(x)}
+  \label{eq:fm_equals_pf}
+\end{equation}
+where $f_t = \dot{\alpha}_t / \alpha_t$ and $g_t^2 = 2\sigma_t \dot{\sigma}_t - 2 f_t \sigma_t^2$.
+\end{thmbox}
+
+\begin{proof}[Proof Sketch]
+From eq.~\eqref{eq:optimal_vel_decomp}, use Tweedie's posterior mean identities:
+\[
+  \E[\varepsilon \mid x_t=x] = -\sigma_t\, s(x,t), \qquad \E[x_0 \mid x_t=x] = \tfrac{1}{\alpha_t}(x + \sigma_t^2\, s(x,t))
+\]
+where $s = \grad \log p_t$. Substituting and grouping terms using $f_t$ and $g_t^2$ yields eq.~\eqref{eq:fm_equals_pf}.
+\end{proof}
+
+\begin{keybox}[Theoretical Equivalence]
+Gaussian flow matching and score-based diffusion models are \textbf{mathematically equivalent}: they learn the same ODE drift via interchangeable regression targets. DDPM, DDIM, EDM, Flow Matching---all are the same model under different schedules and parameterizations.
+
+Yet, practically, the source of generalization is not obvious from this equivalence alone. This is the central question of the next chapters.
+\end{keybox}
+
+\subsection{Schedule Conversion}
+
+The canonical FM schedule $\alpha_t = t$, $\sigma_t = 1-t$ gives the simplest target: $u^{\mathrm{cond}} = x_1 - x_0$. Different schedules (DDPM VP/VE, EDM) induce the same class of flows up to a monotone time reparameterization.
+
+% ============================================================
+\part{The Generalization Puzzle}
+% ============================================================
+
+% ============================================================
+\section{The Closed-Form Optimal Velocity}
+\label{sec:closed_form}
+% ============================================================
+
+\subsection{From Population to Empirical Distribution}
+
+In practice, only $n$ training samples are available. Replace $\pdata$ by the \textbf{empirical distribution}:
+\[
+  \hat{p}_{\mathrm{data}} = \frac{1}{n} \sum_{i=1}^n \delta_{x^{(i)}}
+\]
+Under this empirical distribution, the optimal velocity admits a \textbf{closed-form expression}.
+
+\subsection{The Closed-Form Formula}
+
+\begin{thmbox}[Proposition 1: Closed-Form Empirical Optimal Velocity (Bertrand et al.\ 2025)]
+\begin{equation}
+  \hat{u}^\star(x, t) = \sum_{i=1}^n \lambda_i(x, t)\,\frac{x^{(i)} - x}{1-t}
+  \label{eq:closed_form}
+\end{equation}
+with \textbf{softmax weights} at temperature $(1-t)^2$:
+\begin{equation}
+  \lambda_i(x, t) = \softmax\!\left(-\frac{\|x - t\,x^{(j)}\|^2}{2(1-t)^2}\right)_{j=1,\ldots,n}\!\Bigg|_{j=i}
+  \label{eq:softmax_weights}
+\end{equation}
+\end{thmbox}
+
+\begin{proof}[Derivation]
+The marginal velocity is $\hat{u}^\star(x,t) = \sum_i \frac{x^{(i)}-x}{1-t} \cdot \Pr(x_1 = x^{(i)} \mid x_t = x)$.
+
+By Bayes' theorem:
+\[
+  \Pr(x_1 = x^{(i)} \mid x_t = x) \propto p_t(x \mid x_1=x^{(i)}) \cdot \frac{1}{n}
+\]
+Since $p_t(x \mid x_1) = \mathcal{N}(tx_1, (1-t)^2\Id)$:
+\[
+  p_t(x \mid x_1 = x^{(i)}) \propto \exp\!\left(-\frac{\|x-tx^{(i)}\|^2}{2(1-t)^2}\right)
+\]
+Normalizing gives the softmax weights~\eqref{eq:softmax_weights}.
+\end{proof}
+
+\subsection{The Memorization Property---The Core Paradox}
+
+\begin{keybox}[The Memorization Theorem]
+As $t \to 1$, the softmax temperature $(1-t)^2 \to 0$ and weights concentrate on a single training point:
+\[
+  \lambda_i(x, t) \xrightarrow{t\to 1} \mathbf{1}\bigl[i = \arg\min_j \|x - x^{(j)}\|\bigr]
+\]
+Therefore $\hat{u}^\star(x,t) \to (x^{(i^\star)} - x)/(1-t)$: the ODE points \textbf{directly at a training sample}. Solving the ODE with $\hat{u}^\star$ can only reproduce training data.
+\end{keybox}
+
+\begin{intubox}
+The softmax is a \emph{soft nearest-neighbor} with temperature $(1-t)^2$:
+\begin{itemize}
+  \item Early $t$: temperature is high, all training points contribute---\textbf{collective regime}.
+  \item Late $t$: temperature $\to 0$, single nearest training point dominates---\textbf{memorization regime}.
+\end{itemize}
+The transition between these regimes defines the collapse time $t_C$.
+\end{intubox}
+
+\begin{tcolorbox}[colback=lightred,colframe=mainred,arc=4pt,title={\textbf{The Central Paradox}},fonttitle=\bfseries\color{mainred}]
+\begin{center}
+\emph{If $\hat{u}^\star$ only memorizes, how can flow matching generalize?}
+\end{center}
+\vspace{6pt}
+Two seemingly contradictory facts:
+\begin{itemize}
+  \item \textbf{Fact 1}: The optimal solution $\hat{u}^\star$ is a memorizer---it only reproduces training points.
+  \item \textbf{Fact 2}: Neural networks $u_\theta$ trained with the CFM loss generalize---they produce novel samples.
+\end{itemize}
+Two competing hypotheses: (i) stochasticity in the training target (Vastola 2025), (ii) limited network capacity. This course shows that (ii) is correct.
+\end{tcolorbox}
+
+% ============================================================
+\section{Target Stochasticity: A Failed Hypothesis}
+\label{sec:stochasticity}
+% ============================================================
+
+\subsection{The Hypothesis}
+
+Vastola (2025) proposed that generalization arises from the \textbf{stochastic} nature of the CFM training target $u^{\mathrm{cond}}$: it is only a noisy estimate of $\hat{u}^\star$, and this noise acts as implicit regularization preventing the network from memorizing. The paper (Bertrand et al.\ 2025) challenges this claim.
+
+\subsection{The Cosine Similarity Analysis}
+
+To test the hypothesis, measure how similar $\hat{u}^\star$ and $u^{\mathrm{cond}}$ are at each time $t$:
+\begin{equation}
+  \cos\!\left(\hat{u}^\star((1-t)x_0 + tx_1, t),\; x_1 - x_0\right)
+  \label{eq:cosine}
+\end{equation}
+
+\begin{itemize}
+  \item Cosine $\approx 1$: $u^{\mathrm{cond}} \approx \hat{u}^\star$---the training target is \textbf{non-stochastic}. Stochasticity is negligible.
+  \item Cosine $\ll 1$: targets diverge---genuinely stochastic regime. Stochasticity may matter.
+\end{itemize}
+
+\textbf{Key finding}: On high-dimensional data (CIFAR-10, $d=3072$), cosine similarity approaches 1 before $t=0.2$. The stochastic regime covers only a tiny fraction of the trajectory.
+
+\subsection{The Collapse Time and Its Scaling}
+
+\begin{defbox}[Collapse Time $t_C$]
+$t_C$ = the smallest $t$ such that $\geq 90\%$ of pairs $(x_0, x_1)$ have cosine similarity $> 0.9$.
+
+Equivalently: the time at which the softmax weights~\eqref{eq:softmax_weights} become dominated by a single training point for most trajectories.
+\end{defbox}
+
+\begin{thmbox}[Theoretical Scaling: Biroli et al.\ (2024)]
+\begin{equation}
+  t_C \sim \mathcal{O}\!\left(\frac{\log n}{d}\right)
+  \label{eq:collapse_time}
+\end{equation}
+where $n$ = dataset size, $d$ = data dimension.
+\end{thmbox}
+
+\begin{proof}[Derivation Sketch]
+The softmax weight of $x^{(i)}$ dominates over $x^{(j)}$ when:
+\[
+  \|x_t - tx^{(j)}\|^2 - \|x_t - tx^{(i)}\|^2 \gg (1-t)^2 \log n
+\]
+By concentration of measure in $\Rd^d$, the left side is $\mathcal{O}(d)$ for $j \neq i$. Collapse occurs when $(1-t)^2 \ll d/\log n$, giving $t_C \approx \log(n)/d$ for large $d$.
+\end{proof}
+
+\begin{intubox}
+\textbf{Numerical consequences:}
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+Setting & $d$ & $n$ & $t_C \approx \log n/d$ \\
+\midrule
+2D toy & 2 & 2000 & 3.8 (whole trajectory is stochastic) \\
+$d=100$ synthetic & 100 & 2000 & 0.075 (only 7.5\%) \\
+$d=1000$ & 1000 & 2000 & 0.008 ($<$1\%!) \\
+CIFAR-10 & 3072 & 50000 & 0.0035 (negligible) \\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Adding more data barely helps} ($t_C \propto \log n$). \textbf{Higher dimension is dominant} ($t_C \propto 1/d$).
+\end{intubox}
+
+\begin{keybox}[Conclusion: Stochasticity Cannot Drive Generalization]
+In realistic high-dimensional settings, $u^{\mathrm{cond}} \approx \hat{u}^\star$ for $>95\%$ of the flow trajectory. Target stochasticity can only act in the vanishingly short window $t < t_C$. This is insufficient to explain robust generalization observed in practice.
+\end{keybox}
+
+% ============================================================
+\section{The True Driver: Limited Network Capacity}
+\label{sec:capacity}
+% ============================================================
+
+\subsection{The Main Thesis}
+
+\begin{keybox}[Main Thesis (Bertrand et al.\ 2025)]
+\textbf{Generalization arises when the neural network $u_\theta$ fails to perfectly approximate $\hat{u}^\star$.} The network's limited capacity to represent the complex, memorizing optimal velocity is what causes it to generalize.
+\end{keybox}
+
+Define the \textbf{velocity approximation error}:
+\[
+  \mathcal{E}(t) = \E_{x_0, x_1}\!\left[\norm{u_\theta(x_t, t) - \hat{u}^\star(x_t, t)}^2\right]
+\]
+
+\subsection{Two Failure Zones}
+
+\begin{thmbox}[Two Network Failure Zones]
+$\mathcal{E}(t)$ is large at two critical time intervals:
+
+\textbf{Zone 1---Near $t \approx 0.12$--$0.15$ (stochastic-to-deterministic transition):}
+\begin{itemize}
+  \item For $t < t_C$: $\hat{u}^\star$ is a complex mixture (many softmax weights active).
+  \item CFM trains $u_\theta$ to predict $u^{\mathrm{cond}}$, but $u^{\mathrm{cond}} \neq \hat{u}^\star$.
+  \item Therefore $u_\theta \approx u^{\mathrm{cond}} \neq \hat{u}^\star$---high approximation error.
+  \item For $t > t_C$: $u^{\mathrm{cond}} \approx \hat{u}^\star$, so $u_\theta \approx \hat{u}^\star$---error drops.
+\end{itemize}
+
+\textbf{Zone 2---Near $t \to 1$ (non-Lipschitz regime):}
+\begin{itemize}
+  \item $\hat{u}^\star(x,t) \approx (x^{(i^\star)}-x)/(1-t)$ diverges as $t \to 1$.
+  \item Neural networks have bounded Lipschitz constant---cannot represent this divergence.
+  \item Error spikes for large $n$ (more complex, sharper $\hat{u}^\star$).
+\end{itemize}
+\end{thmbox}
+
+\subsection{The Causal Chain}
+
+\begin{tcolorbox}[colback=lightgray,colframe=darkgray,arc=4pt,title={\textbf{Causal Mechanism: From Stochastic Regime to Generalization}},fonttitle=\bfseries]
+\begin{enumerate}
+  \item \textbf{$t < t_C$:} Multiple training points contribute to $\hat{u}^\star$. The training target $u^{\mathrm{cond}}$ is a single draw from this mixture, not the mixture itself.
+  \item \textbf{Network trains on $u^{\mathrm{cond}}$:} At finite capacity, $u_\theta$ learns the average target $u^\star \neq \hat{u}^\star$.
+  \item \textbf{Consequence:} Where $\hat{u}^\star \neq u^{\mathrm{cond}}$, we have $u_\theta \neq \hat{u}^\star$---high error---trajectories are diverted from individual training points.
+  \item \textbf{$t > t_C$:} $u^{\mathrm{cond}} \approx \hat{u}^\star$, so $u_\theta \approx \hat{u}^\star$---low error---trajectory commits to a mode.
+\end{enumerate}
+\textbf{The early diversion at $t < t_C$ determines whether the sample generalizes.}
+\end{tcolorbox}
+
+\subsection{The Generalization Switching Time}
+
+To precisely locate when generalization occurs, introduce a \textbf{hybrid model}:
+
+\begin{defbox}[Hybrid Model and Switching Time $\tau$]
+For threshold $\tau \in [0,1]$:
+\begin{itemize}
+  \item On $[0, \tau]$: follow $\hat{u}^\star$ (the closed-form, memorizing velocity).
+  \item On $[\tau, 1]$: follow $u_\theta$ (the trained, generalizing network).
+\end{itemize}
+\begin{itemize}
+  \item $\tau = 0$: pure $u_\theta$ $\to$ model generalizes.
+  \item $\tau = 1$: pure $\hat{u}^\star$ $\to$ model memorizes by construction.
+  \item Intermediate $\tau$: sharp transition.
+\end{itemize}
+\end{defbox}
+
+Measure generalization via the \textbf{mean nearest-neighbor (NN) distance}:
+\[
+  \mathrm{NN\text{-}dist} = \frac{1}{m}\sum_{j=1}^m \min_i \norm{y_j - x^{(i)}}
+\]
+High = generalization, low = memorization.
+
+\textbf{Experimental result (2D Gaussian mixture, $n=2000$):}
+\begin{itemize}
+  \item \textbf{Plateau for $\tau \leq 0.2$}: NN distance $\approx 0.022$, same as pure $u_\theta$.
+  \item \textbf{Sharp drop at $\tau \approx 0.35$}: NN distance collapses toward 0.
+\end{itemize}
+
+\begin{keybox}[Main Finding: Where Generalization Lives]
+\textbf{Generalization occurs in the first $\sim$20--30\% of the flow trajectory}, precisely where $u_\theta$ cannot approximate $\hat{u}^\star$ faithfully. Bypassing this ``failure window'' by using $\hat{u}^\star$ directly eliminates generalization entirely.
+\end{keybox}
+
+% ============================================================
+\section{Empirical Flow Matching: Definitively Ruling Out Stochasticity}
+\label{sec:efm}
+% ============================================================
+
+\subsection{Motivation}
+
+If stochasticity causes generalization, a more deterministic training target should destroy it. If capacity is the true cause, it should make no difference.
+
+\subsection{The EFM Algorithm}
+
+\begin{thmbox}[Empirical Flow Matching (EFM) Loss]
+Replace the stochastic target $u^{\mathrm{cond}}$ with a Monte Carlo estimate $\hat{u}^\star_M$ using $M$ samples:
+\begin{equation}
+  \mathcal{L}_{\mathrm{EFM}}(\theta) = \E\!\left[\norm{u_\theta(x_t, t) - \hat{u}^\star_M(x_t, t)}^2\right]
+  \label{eq:efm_loss}
+\end{equation}
+where $b^{(1)} := x_1$, $b^{(2)},\ldots,b^{(M)} \sim \hat{p}_{\mathrm{data}}$, and:
+\[
+\begin{aligned}
+  \hat{u}^\star_M(x, t) &= \sum_{j=1}^M \frac{b^{(j)} - x}{1-t} \\
+  &\quad\cdot \softmax\!\left(-\frac{\|x - t\,b^{(k)}\|^2}{2(1-t)^2}\right)_{k=1,\ldots,M}\!\Bigg|_{k=j}
+\end{aligned}
+\]
+\end{thmbox}
+
+\begin{itemize}
+  \item $M=1$: reduces to standard CFM (one noisy sample).
+  \item $M \to \infty$: approaches deterministic $\hat{u}^\star$ exactly.
+  \item Including $x_1$ as $b^{(1)}$ makes the estimator unbiased.
+\end{itemize}
+
+\subsection{Results on Fashion-MNIST}
+
+Systematic sweep over $M \in \{1, 16, 32, 64, 128, 256, 512\}$, 3 seeds each:
+
+\begin{center}
+\begin{tabular}{ccc}
+\toprule
+$M$ & Training loss $\downarrow$ & NN distance $\uparrow$ \\
+\midrule
+1 (CFM) & 0.276 & $10.21 \pm 0.54$ \\
+32      & lower & $9.61 \pm 0.52$ \\
+128     & lower & $9.61 \pm 0.52$ \\
+512     & 0.207 & $10.07 \pm 0.21$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+All NN distances overlap within one standard deviation. EFM achieves lower training loss but \textbf{identical generalization quality}.
+
+\begin{keybox}[Verdict: Stochasticity Is Not the Cause]
+Reducing stochasticity of the training target (increasing $M$) does not degrade generalization. This definitively rules out target stochasticity as the driver of generalization in flow matching.
+\end{keybox}
+
+% ============================================================
+\part{Experiments and Results}
+% ============================================================
+
+% ============================================================
+\section{Experimental Setup}
+\label{sec:setup}
+% ============================================================
+
+\subsection{Synthetic Datasets}
+
+\begin{defbox}[2D Toy Datasets]
+\begin{itemize}
+  \item \textbf{Moons}: two interleaving half-circles, noise $= 0.06$. Low intrinsic dimension.
+  \item \textbf{Rings}: three concentric circles, radii $\{0.5, 1.0, 1.5\}$, $\sigma = 0.05$.
+  \item \textbf{Gaussian mixture}: 8 isotropic Gaussians ($\sigma=0.15$) on a circle of radius 2.
+\end{itemize}
+\end{defbox}
+
+\begin{defbox}[High-Dimensional Gaussian Mixture]
+8 centers on a hypersphere of radius $\sqrt{2d}$ in $\Rd^d$, per-coordinate noise $\sigma = 0.5$. Interpoint distances scale as $\mathcal{O}(d)$, mimicking real image data. Used for $d \in \{2, 10, 50, 100, 500, 1000\}$ with $n = 2000$.
+\end{defbox}
+
+\subsection{Architectures}
+
+\begin{tabularx}{\textwidth}{lXlX}
+\toprule
+\textbf{Setting} & \textbf{Architecture} & \textbf{Params} & \textbf{Training} \\
+\midrule
+2D & 4-layer MLP, 256 hidden, SiLU & $\sim$200K & Adam $10^{-3}$, 20K steps \\
+$d=100$ & 5-layer MLP, 512 hidden, SiLU & $\sim$1.2M & Adam $10^{-3}$, 30K steps \\
+Fashion-MNIST & Small UNet, 3 levels, GroupNorm & $\sim$1.5M & Adam $2\!\times\!10^{-4}$, 25 epochs \\
+\bottomrule
+\end{tabularx}
+
+Input: $(x_t;\, t) \in \Rd^{d+1}$. Output: $u_\theta(x_t, t) \in \Rd^d$.
+
+\subsection{Measured Quantities}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Metric} & \textbf{Definition} & \textbf{Interpretation} \\
+\midrule
+Cosine similarity & $\cos(\hat{u}^\star(x_t,t),\; u^{\mathrm{cond}}(x_t,x_1,t))$ & Near 1: non-stochastic \\
+Collapse time $t_C$ & Min $t$: $\geq 90\%$ pairs with cosine $> 0.9$ & Duration of stochastic window \\
+Velocity approx.\ error & $\mathcal{E}(t) = \E[\|u_\theta - \hat{u}^\star\|^2]$ & Network failure zones \\
+NN distance & $\frac{1}{m}\sum_j \min_i \|y_j - x^{(i)}\|$ & Generalization vs.\ memorization \\
+Switching time $\tau$ & Threshold: NN distance drops below $u_\theta$ baseline & Location of generalization \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ============================================================
+\section{Reproducing the Three Main Figures}
+\label{sec:replication}
+% ============================================================
+
+\subsection{Figure 1: Stochasticity Analysis}
+
+\subsubsection{Cosine Similarity Histograms}
+
+Sample 256 pairs $(x_0, x_1)$ and plot cosine similarity distributions at $t \in \{0.01, 0.10, 0.20, 0.40, 0.60, 0.80, 0.95\}$.
+
+\textbf{Results:}
+\begin{itemize}
+  \item Early $t$: distribution spread over $[-1,1]$---stochastic regime, many conditional directions possible.
+  \item Late $t$: all mass concentrated near 1---non-stochastic regime, single direction dominates.
+  \item 2D datasets: transition at $t \approx 0.4$--$0.8$.
+\end{itemize}
+
+\subsubsection{Dimension Dependence}
+
+Fraction of pairs with cosine $> 0.9$ vs.\ $t$, for $d \in \{2, 10, 50, 100, 500, 1000\}$:
+\begin{itemize}
+  \item $d=2$: collapse at $t \approx 0.6$--$0.8$.
+  \item $d=100$: complete by $t \approx 0.3$.
+  \item $d=1000$: full alignment before $t=0.1$.
+\end{itemize}
+Going from $d=2$ to $d=1000$ shifts collapse from 70\% to $<$10\% of the trajectory.
+
+\subsubsection{Validation of the $\log(n)/d$ Law}
+
+Empirical $t_C$ matches the Biroli et al.\ prediction $\propto \log(n)/d$:
+\begin{itemize}
+  \item Excellent fit across two orders of magnitude in $d$, for both $n=500$ and $n=2000$.
+  \item The $\log(n)/d$ law---originally derived for diffusion models---carries over precisely to flow matching.
+\end{itemize}
+
+\subsection{Figure 2: Velocity Approximation Failure}
+
+Train on $d=100$ Gaussian mixture (5-layer MLP, 512 hidden), vary $n \in \{10, 50, 200, 1000, 5000\}$.
+Evaluate $\mathcal{E}(t)$ at each $t$.
+
+\subsubsection{Early-Time Bump ($t \approx 0.12$--$0.15$)}
+\begin{itemize}
+  \item For $n=10$: clear peak at $t \approx 0.12$, exactly at the stochastic-to-deterministic transition.
+  \item This bump is a \emph{causal consequence} of the stochastic regime: $u_\theta \approx u^{\mathrm{cond}} \neq \hat{u}^\star$ during $t < t_C$.
+\end{itemize}
+
+\subsubsection{Late-Time Divergence ($t \to 1$)}
+\begin{itemize}
+  \item For $n \geq 200$: error rises sharply, exceeding 120 near $t \approx 0.8$--$0.9$.
+  \item The non-Lipschitz behavior of $\hat{u}^\star$ exceeds the network's representational capacity.
+\end{itemize}
+
+\subsubsection{Error Grows with $n$ at Late Times}
+For $t > 0.3$, larger datasets produce higher approximation error: $\hat{u}^\star$ grows in complexity with $n$.
+
+\subsubsection{Differences with the Original Paper (CIFAR-10)}
+The paper's U-Net shows near-zero error for $n=10$; our MLP shows high error ($\sim$100). \textbf{Reason}: architectural inductive bias. A U-Net exploits convolutional priors and skip connections to approximate $\hat{u}^\star$ more faithfully. This is self-consistent: the extent of memorization depends on how well $u_\theta$ approximates $\hat{u}^\star$, which is architecture-dependent.
+
+\subsection{Figure 3: Generalization Switching Time}
+
+Hybrid sampler for $\tau \in \{0, 0.05, \ldots, 1.0\}$, 256 fixed noise vectors (2D Gaussian mixture, $n=2000$).
+
+\textbf{Result:}
+\begin{itemize}
+  \item Plateau for $\tau \leq 0.2$: NN distance $\approx 0.022$ (same as pure $u_\theta$).
+  \item Sharp drop at $\tau \approx 0.35$: distance collapses toward 0 (memorization).
+\end{itemize}
+
+\textbf{Conclusion:} Generalization is concentrated in the first $\sim$20\% of the trajectory, exactly where the network fails to reproduce $\hat{u}^\star$.
+
+% ============================================================
+\section{Additional Experiments: Going Beyond the Paper}
+\label{sec:additional}
+% ============================================================
+
+\subsection{Dataset Geometry}
+
+Switching time across three 2D datasets ($n=2000$):
+\begin{itemize}
+  \item \textbf{Moons}: switching time slightly earlier (more structured, simpler $\hat{u}^\star$).
+  \item \textbf{Rings}: later (multi-scale structure, harder to approximate).
+  \item \textbf{Gaussian mixture}: intermediate.
+\end{itemize}
+\textbf{Interpretation:} The complexity of $\hat{u}^\star$ depends on the data manifold. Simpler geometries lead to earlier memorization.
+
+\subsection{Dimension Scaling}
+
+\textbf{Low-to-moderate $d$ ($d \in \{2, 10, 50, 100\}$):} Switching time shifts earlier as $d$ grows. The non-stochastic regime starts sooner, but the network still fails in $[0, t_C]$.
+
+\textbf{Very high $d$ ($d \in \{1000, 5000, 10000, 20000\}$):} NN distance curve is flat for \emph{all} $\tau \in [0,1]$, including $\tau=1$.
+\begin{itemize}
+  \item At $d=1000$, $n=2000$: $t_C \approx 0.008$. Softmax collapses almost instantly.
+  \item \textbf{In very high dimensions, the memorization-vs-generalization dichotomy vanishes}: $\hat{u}^\star$ itself generalizes by necessity. Data is so sparse relative to dimension that no individual point can be isolated by the trajectory.
+\end{itemize}
+
+\subsection{Model Capacity}
+
+Fix $d=2$, $n=2000$. Vary MLP hidden dimension $\in \{32, 64, 128, 256, 512\}$:
+\begin{itemize}
+  \item \textbf{Larger networks} (512 hidden, $\sim$793K params): switching time at smaller $\tau$---generalization window narrows.
+  \item \textbf{Smaller networks} (32 hidden, $\sim$3K params): switching curve flat for all $\tau$---never fully memorize.
+\end{itemize}
+
+\begin{keybox}[Capacity Confirms the Thesis]
+Larger networks approximate $\hat{u}^\star$ better, which \textbf{reduces} generalization. More capacity $\to$ more memorization. This is the opposite of noise-as-regularization---it directly confirms: generalization stems from the network's inability to represent $\hat{u}^\star$.
+\end{keybox}
+
+\subsection{Training Duration}
+
+Vary gradient steps $\in \{1000, 5000, 10000, 20000, 50000\}$:
+\begin{itemize}
+  \item Under-trained (1000 steps): poor quality but strong generalization.
+  \item More training: model increasingly memorizes $\hat{u}^\star$ $\to$ memorization expands.
+  \item Beyond $\sim$10K steps: little further change. The bottleneck is \textbf{capacity}, not optimization.
+\end{itemize}
+
+% ============================================================
+\part{Synthesis and Critical Analysis}
+% ============================================================
+
+% ============================================================
+\section{Unified Mental Model}
+\label{sec:unified}
+% ============================================================
+
+\subsection{The Complete Picture}
+
+\begin{tcolorbox}[colback=lightgray,colframe=darkgray,arc=4pt,title={\textbf{Flow Trajectory Timeline ($t \in [0,1]$)}},fonttitle=\bfseries]
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{p{3cm}p{6cm}p{4cm}}
+\toprule
+\textbf{Time} & \textbf{Phase} & \textbf{Effect on samples} \\
+\midrule
+$[0, t_C]$ $\approx [0, 0.15]$ & Stochastic: $\hat{u}^\star \neq u^{\mathrm{cond}}$, $u_\theta \not\approx \hat{u}^\star$ & \textbf{Generalization}: trajectories diverted from individual training-point basins \\
+$[t_C, 0.8]$ & Deterministic: $u_\theta \approx \hat{u}^\star$, low error & \textbf{Mode commitment}: trajectory locks into a data cluster \\
+$[0.8, 1]$ & Non-Lipschitz: $u_\theta$ cannot fit sharp $\hat{u}^\star$ & \textbf{Memorization risk}: if $\hat{u}^\star$ is used directly \\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{6pt}
+\textbf{Key insight:} The early redirection at $t < t_C$ decides whether the sample generalizes. By $t > t_C$, the trajectory has already committed.
+\end{tcolorbox}
+
+\subsection{What Controls Generalization}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Factor} & \textbf{Effect} & \textbf{Direction} \\
+\midrule
+Dimension $d$ $\uparrow$ & $t_C \propto 1/d$ decreases; non-stochastic regime earlier & Earlier $\tau$ \\
+Dataset size $n$ $\uparrow$ & $t_C \propto \log n$ increases; $\hat{u}^\star$ more complex & Mixed \\
+Model capacity $\uparrow$ & Better approximation of $\hat{u}^\star$; failure window shrinks & $\to$ Memorization \\
+Training steps $\uparrow$ & Better fit to $\hat{u}^\star$ & $\to$ Memorization \\
+Simpler data geometry & Simpler $\hat{u}^\star$; easier to approximate & $\to$ Memorization \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ============================================================
+\section{Critical Discussion}
+\label{sec:discussion}
+% ============================================================
+
+\subsection{Strengths of the Paper}
+
+\textbf{1. Mathematical equivalence.} Clearly unifies FM and diffusion literature. Showing all four parameterizations are interchangeable clarifies many empirical comparisons.
+
+\textbf{2. The hybrid model.} An elegant experimental design: replacing $u_\theta$ with $\hat{u}^\star$ in different time windows precisely localizes when generalization occurs, without confounding factors.
+
+\textbf{3. Validation of $\log(n)/d$ scaling.} Extends Biroli et al.'s theoretical result to the flow matching framework, confirmed across two orders of magnitude in $d$.
+
+\textbf{4. EFM experiment.} A decisive test: directly manipulates stochasticity and shows no effect on generalization quality.
+
+\subsection{Limitations and Critical Points}
+
+\textbf{(i) The collapse result is theoretically expected.}
+The near-identity $\hat{u}^\star \approx u^{\mathrm{cond}}$ in high dimensions follows from the gradient equivalence theorem (Lipman et al.\ Thm.\ 2) plus concentration of measure. The empirical demonstration validates a known theoretical fact; the conceptual content is not entirely new.
+
+\textbf{(ii) Internal tension with EFM.}
+Section 3.1 argues $\hat{u}^\star \approx u^{\mathrm{cond}}$ for $\sim$85\% of $[0,1]$ in high dimensions. Section 5 then proposes EFM to reduce variance. But if targets are already nearly identical for 85\% of the trajectory, variance reduction only affects the short stochastic phase. This explains why EFM yields ``modest but steady improvements''---it solves a problem the paper has already shown to be minor.
+
+\textbf{(iii) Where the genuine contribution lies.}
+The central contribution is the \textbf{temporal analysis}: identifying that generalization is concentrated in the first $\sim$20\% of the flow, where $u_\theta$ fails to approximate $\hat{u}^\star$, and proving this via the hybrid model. The insight---\emph{limited network capacity, not target noise, drives generalization}---is genuinely new and well supported.
+
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+% ============================================================
+
+\begin{tcolorbox}[colback=lightblue,colframe=mainblue,arc=4pt,title={\textbf{Summary of Core Results}},fonttitle=\bfseries]
+\begin{enumerate}
+  \item \textbf{Mathematical equivalence}: Gaussian FM and score-based diffusion learn the same ODE drift. All four parameterizations are interchangeable (Theorem~\ref{thm:equivalence}).
+  \item \textbf{Closed-form memorization}: The empirical optimal $\hat{u}^\star$ is a softmax mixture pointing toward individual training points as $t \to 1$---pure memorization.
+  \item \textbf{Short stochastic phase}: $t_C \sim \log(n)/d$ is tiny in high dimensions. Stochasticity cannot drive generalization.
+  \item \textbf{Capacity drives generalization}: The velocity approximation error $\mathcal{E}(t)$ is large at $t < t_C$, where $u_\theta$ fails. This is the generalization window.
+  \item \textbf{Generalization is early}: The hybrid model shows generalization in the first $\sim$20--30\% of the flow. Bypassing this window eliminates generalization.
+  \item \textbf{EFM confirms}: Deterministic targets do not degrade generalization, ruling out stochasticity as the cause.
+\end{enumerate}
+\end{tcolorbox}
+
+\subsection{The Take-Home Message}
+
+Generalization in flow matching is \textbf{not a gift from noise}. It is a \textbf{consequence of finite model capacity}: the network cannot represent the highly complex, memorizing velocity field $\hat{u}^\star$ at early times. This failure redirects trajectories away from individual training points and toward the broader data manifold.
+
+As models grow larger or train longer, they approximate $\hat{u}^\star$ more faithfully---and generalize \emph{less}. The right kind of approximation error, concentrated in the early trajectory, is what produces robust generalization.
+
+% ============================================================
+\appendix
+% ============================================================
+
+\section{Mathematical Proofs}
+
+\subsection{Proof of the Fokker--Planck Equation}
+
+For the SDE $\dd X_t = f(X_t,t)\,\dd t + g(t)\,\dd W_t$, It\^{o}'s lemma gives for any smooth test function $\phi$ with compact support:
+\[
+  \frac{\dd}{\dd t}\E[\phi(X_t)] = \E\!\left[\grad \phi \cdot f + \frac{g^2}{2}\Delta \phi\right]
+\]
+Writing $\E[\phi(X_t)] = \int \phi\, p_t\,\dd x$ and integrating by parts:
+\[
+  \int \phi\,\partial_t p_t\,\dd x = \int \phi\!\left[-\divg(p_t f) + \tfrac{g^2}{2}\Delta p_t\right]\dd x
+\]
+Since this holds for all $\phi$, we recover eq.~\eqref{eq:fokker_planck}.
+
+\subsection{Proof of the Probability-Flow ODE}
+
+For ODE $\dot{\tilde{X}}_t = v(\tilde{X}_t,t)$, the Fokker--Planck is $\partial_t p_t = -\divg(p_t v)$. Substituting $v = f - \frac{g^2}{2}\grad \log p_t$:
+\[
+  -\divg(p_t v) = -\divg(p_t f) + \frac{g^2}{2}\divg(\grad p_t) = -\divg(p_t f) + \frac{g^2}{2}\Delta p_t
+\]
+since $p_t \grad \log p_t = \grad p_t$. This recovers the SDE's Fokker--Planck equation.
+
+\subsection{Variance Decomposition Lemma}
+
+\begin{lemma}
+For any $A \in \Rd^d$ and $\sigma(X)$-measurable predictor $f(X)$:
+\[
+  \E[\norm{f(X)-A}^2] = \E[\norm{f(X)-\E[A\mid X]}^2] + \E[\norm{A-\E[A\mid X]}^2]
+\]
+\end{lemma}
+\begin{proof}
+Write $f-A = (f-\E[A\mid X]) + (\E[A\mid X]-A)$. Expand the squared norm. The cross term vanishes: $\E[\langle f-\E[A\mid X], \E[A\mid X]-A\rangle] = 0$ since $\E[\E[A\mid X]-A \mid X] = 0$ by the tower property.
+\end{proof}
+
+\subsection{Quick Reference: All Key Equations}
+
+{\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{lXl}
+\toprule
+\textbf{Name} & \textbf{Equation} & \textbf{Ref.} \\
+\midrule
+Forward SDE & $\dd X_t = f X_t\,\dd t + g\,\dd W_t$ & \eqref{eq:forward_sde} \\
+Linear SDE marginal & $X_t\mid x_0 \sim \mathcal{N}(\alpha_t x_0, \sigma_t^2\Id)$ & Prop.~\ref{prop:linear_sde} \\
+Fokker--Planck & $\partial_t p_t = -\divg(p_t f) + \frac{g^2}{2}\Delta p_t$ & \eqref{eq:fokker_planck} \\
+PF-ODE & $\dot{\tilde{X}}_t = f\tilde{X}_t - \frac{g^2}{2}\grad\log p_t$ & \eqref{eq:pf_ode} \\
+Tweedie & $\grad\log p_t(x) = \E[\grad\log p_t(x\mid x_0)\mid x_t=x]$ & \eqref{eq:tweedie} \\
+DSM loss & $\mathcal{L}_\mathrm{DSM} = \E\|s_\theta(\alpha_t x_0+\sigma_t\varepsilon,t)+\varepsilon/\sigma_t\|^2$ & \eqref{eq:dsm} \\
+Cond.\ path & $p_t(\cdot\mid x_1) = \mathcal{N}(tx_1,(1-t)^2\Id)$ & \eqref{eq:cond_path} \\
+Cond.\ velocity & $u^{\mathrm{cond}}(x,x_1,t) = (x_1-x)/(1-t)$ & \eqref{eq:cond_vel} \\
+CFM loss & $\mathcal{L}_\mathrm{CFM} = \E\|u_\theta(x_t,t)-(x_1-x_0)\|^2$ & \eqref{eq:cfm_loss} \\
+FM $=$ PF-ODE & $v^\star(x,t) = f_t x - \frac{g_t^2}{2}\grad\log p_t(x)$ & \eqref{eq:fm_equals_pf} \\
+Closed-form $\hat{u}^\star$ & $\sum_i\lambda_i(x^{(i)}-x)/(1-t)$, $\lambda=\softmax(\cdots)$ & \eqref{eq:closed_form} \\
+Collapse time & $t_C \sim \mathcal{O}(\log n/d)$ & \eqref{eq:collapse_time} \\
+EFM loss & $\mathcal{L}_\mathrm{EFM} = \E\|u_\theta - \hat{u}^\star_M\|^2$ & \eqref{eq:efm_loss} \\
+\bottomrule
+\end{tabularx}
+}
+
+\section{Glossary}
+
+\begin{description}[leftmargin=3.5cm,style=nextline]
+  \item[Brownian motion] Continuous-time stochastic process with Gaussian increments; continuous limit of a random walk.
+  \item[Collapse time $t_C$] Time at which softmax weights concentrate on a single training point. Scales as $\mathcal{O}(\log n/d)$.
+  \item[CFM loss] Tractable FM training objective using per-sample targets $u^{\mathrm{cond}} = x_1-x_0$.
+  \item[Continuity equation] PDE $\partial_t p_t + \divg(p_t u) = 0$; conservation of probability mass.
+  \item[DSM] Denoising Score Matching; tractable training objective for score functions.
+  \item[EFM] Empirical Flow Matching; variant using $M$-sample Monte Carlo estimate of $\hat{u}^\star$.
+  \item[Fokker--Planck] PDE governing the density evolution of a diffusion process.
+  \item[Flow matching] Framework learning a velocity field $u_\theta$ transporting $\mathcal{N}(0,\Id)$ to $\pdata$ via an ODE.
+  \item[NN distance] Mean distance from generated samples to nearest training point; high $=$ generalization.
+  \item[PF-ODE] Probability-flow ODE; deterministic ODE with same marginals as the SDE.
+  \item[Score function] $\grad_x\log p_t(x)$; points toward high-density regions.
+  \item[Switching time $\tau$] Threshold in the hybrid model at which $\hat{u}^\star$ causes memorization.
+  \item[Velocity approx.\ error] $\E[\|u_\theta-\hat{u}^\star\|^2]$; measures network failure to represent $\hat{u}^\star$.
+\end{description}
+
+\section{References}
+
+\begin{enumerate}
+  \item M.\,S.\ Albergo and E.\ Vanden-Eijnden. Building normalizing flows with stochastic interpolants. \textit{ICLR}, 2023.
+  \item Q.\ Bertrand, A.\ Gagneux, M.\ Massias, and R.\ Emonet. On the closed-form of flow matching: Generalization does not arise from target stochasticity. \textit{NeurIPS}, 2025.
+  \item G.\ Biroli, T.\ Bonnaire, V.\ de Bortoli, and M.\ M\'{e}zard. Dynamical regimes of diffusion models. \textit{Nature Communications}, 15(1):9957, 2024.
+  \item W.\ Gao and M.\ Li. How do flow matching models memorize and generalize in sample data subspaces? \textit{arXiv:2410.23594}, 2024.
+  \item J.\ Ho, A.\ Jain, and P.\ Abbeel. Denoising diffusion probabilistic models. \textit{NeurIPS}, 2020.
+  \item Y.\ Lipman, R.\,T.\,Q.\ Chen, H.\ Ben-Hamu, M.\ Nickel, and M.\ Le. Flow matching for generative modeling. \textit{ICLR}, 2023.
+  \item Y.\ Lipman et al.\ Flow matching guide and code. \textit{arXiv:2412.06264}, 2024.
+  \item X.\ Liu, C.\ Gong, and Q.\ Liu. Flow straight and fast: Learning to generate and transfer data with rectified flow. \textit{ICLR}, 2023.
+  \item Y.\ Song et al.\ Score-based generative modeling through stochastic differential equations. \textit{ICLR}, 2021.
+  \item J.\,J.\ Vastola. Generalization through variance: How noise shapes inductive biases in diffusion models. \textit{ICLR}, 2025.
+\end{enumerate}
+
+\end{document}

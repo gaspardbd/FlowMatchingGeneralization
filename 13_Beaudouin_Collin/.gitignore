@@ -1,0 +1,49 @@
+# OS and editor files
+.DS_Store
+.claude/
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Secrets and local environment
+.env
+.env.*
+
+# Data, checkpoints, and experiment outputs
+/data/
+outputs/
+runs/
+wandb/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Archives and exported submission bundles
+*.zip
+/13_Beaudouin_Collin.pdf
+
+# Local unpacked submission wrapper
+13_Beaudouin_Collin_code/
